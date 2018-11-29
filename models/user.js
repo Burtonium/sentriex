@@ -16,8 +16,8 @@ class User extends Password(Model) {
 
   static get relationMappings() {
     return {
-      activation: {
-        relation: Model.HasOneRelation,
+      activationTokens: {
+        relation: Model.HasManyRelation,
         modelClass: `${__dirname}/activation`,
         join: {
           from: 'users.id',
@@ -47,27 +47,7 @@ class User extends Password(Model) {
           from: 'users.id',
           to: 'balances.userId',
         },
-      },
-      adminGroups: {
-        relation: Model.ManyToManyRelation,
-        modelClass: `${__dirname}/admin_group`,
-        join: {
-          from: 'users.id',
-          through: {
-            from: 'admin_group_memberships.adminId',
-            to: 'admin_group_memberships.adminGroupId',
-          },
-          to: 'admin_groups.id',
-        },
-      },
-      adminActions: {
-        relation: Model.HasManyRelation,
-        modelClass: `${__dirname}/admin_action`,
-        join: {
-          from: 'users.id',
-          to: 'admin_actions.adminId',
-        },
-      },
+      }
     };
   }
 }

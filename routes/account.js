@@ -186,7 +186,7 @@ const formatAccount = async (user) => {
 };
 
 const getAccount = async (req, res) => {
-  const user = await User.query().eager(User.Verification).where('id', req.user.id).first();
+  const user = await User.query().where('id', req.user.id).first();
   assert.ok(user, `getAccount() user ${req.user.id} not found`);
   const formatted = await formatAccount(user);
   res.status(200).json(formatted);
