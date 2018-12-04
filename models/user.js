@@ -47,7 +47,15 @@ class User extends Password(Model) {
           from: 'users.id',
           to: 'balances.userId',
         },
-      }
+      },
+      investmentFundShares: {
+        relation: Model.HasManyRelation,
+        modelClass: `${__dirname}/investment_fund_shares`,
+        join: {
+          from: 'users.id',
+          to: 'investment_fund_share_balances.userId',
+        },
+      },
     };
   }
 }

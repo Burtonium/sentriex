@@ -14,6 +14,7 @@ exports.up = knex => knex.schema.createTable('investment_fund_share_balances', (
     .index();
   
   table.decimal('amount', 30, 15).notNullable();
+  table.unique(['user_id', 'investment_fund_id']);
   table.timestamps();
 });
 

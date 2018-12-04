@@ -1,7 +1,7 @@
 const User = require('../../models/user');
 
 exports.seed = async (knex) => User.query().insert([{
-  id: 1,
+  id: 0,
   email: 'admin@sentriex.com',
   username: 'test_admin',
   type: 'admin',
@@ -9,7 +9,7 @@ exports.seed = async (knex) => User.query().insert([{
   active: true,
   activatedAt: new Date()
 }, {
-  id: 2,
+  id: 1,
   email: 'manager@sentriex.com',
   username: 'test_fund_manager',
   type: 'fund_manager',
@@ -17,7 +17,7 @@ exports.seed = async (knex) => User.query().insert([{
   active: true,
   activatedAt: new Date()
 }, {
-  id: 3,
+  id: 2,
   email: 'user@sentriex.com',
   username: 'test_user',
   type: 'user',

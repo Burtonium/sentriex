@@ -7,7 +7,9 @@ exports.up = knex => knex.schema.createTable('investment_funds', (table) => {
     .onDelete('CASCADE')
     .index();
   table.string('name').notNullable();
-  table.string('description');
+  table.enum('risk_level', ['high', 'medium', 'low']).notNullable().defaultTo('high').index();
+  table.string('short_description');
+  table.string('detailed_description');
     table.string('currency_code', 10)
     .references('code')
     .inTable('currencies')
