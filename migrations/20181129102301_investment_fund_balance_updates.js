@@ -6,14 +6,9 @@ exports.up = knex => knex.schema.createTable('investment_fund_balance_updates', 
     .inTable('investment_funds')
     .onDelete('CASCADE')
     .index();
-  table.bigInteger('user_id')
-    .unsigned()
-    .references('id')
-    .inTable('users')
-    .onDelete('CASCADE')
-    .index();
   
-  table.decimal('amount', 30, 15).notNullable();
+  table.decimal('previous_balance', 30, 15).notNullable();
+  table.decimal('updated_balance', 30, 15).notNullable();
   table.timestamps();
 });
 

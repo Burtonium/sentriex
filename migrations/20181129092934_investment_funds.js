@@ -16,7 +16,7 @@ exports.up = knex => knex.schema.createTable('investment_funds', (table) => {
     .onUpdate('CASCADE')
     .onDelete('CASCADE')
     .index();
-  table.decimal('balance', 30, 15).notNullable();
+  table.decimal('balance', 30, 15).defaultTo(0).notNullable();
   table.timestamps();
 });
 

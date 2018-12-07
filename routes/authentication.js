@@ -72,6 +72,13 @@ const verifyAdmin = (req, res, next) => {
   next();
 };
 
+const verifyManager = (req, res, next) => {
+  if (!req.user.manager) {
+    throw new Unauthorized();
+  }
+  next();
+};
+
 const authenticate = async (req, res) => {
   const identifier = req.body.identifier.toLowerCase();
   const { password, twofaToken } = req.body;
@@ -98,15 +105,18 @@ const authenticate = async (req, res) => {
   const CSRFToken = uuid();
 
   const expirySeconds = 60 * 60;
-
+  
+  const userDetails = {
+    email: user.email,
+    id: user.id,
+    username: user.username,
+    active: user.active,
+    admin: user.type === 'admin',
+    manager: user.type === 'admin' || user.type === 'fund_manager',
+  };
+  
   const encoded = jwt.sign({
-    user: {
-      email: user.email,
-      id: user.id,
-      username: user.username,
-      active: user.active,
-      admin: user.admin,
-    },
+    user: userDetails,
   }, process.env.JWT_SECRET, { expiresIn: expirySeconds });
 
   const CSRFOptions = {
@@ -122,7 +132,8 @@ const authenticate = async (req, res) => {
     .json({
       success: true,
       message: 'Authentication successful',
-      CSRFToken,
+      user: userDetails,
+      CSRFToken
     });
 };
 
@@ -205,5 +216,6 @@ module.exports = {
   disable2fa,
   verifyAdmin: [verifyToken, verifyAdmin],
   verify2fa,
-  cookieKeys
+  cookieKeys,
+  verifyManager: [verifyToken, verifyManager],
 };

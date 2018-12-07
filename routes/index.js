@@ -24,8 +24,13 @@ routes.get('/balances', auth.verifyToken, balances.fetchAll);
 
 routes.get('/investment-funds', auth.verifyToken, investmentFunds.fetchAll);
 routes.get('/investment-fund-shares', auth.verifyToken, investmentFunds.fetchShares);
-routes.post('/investment-funds/:id/subscribe', investmentFunds.subscribeToFund);
-routes.post('/investment-funds/:id/redeem', investmentFunds.redeemFromFund);
+routes.post('/investment-funds/:id/subscribe', auth.verifyToken, investmentFunds.subscribeToFund);
+routes.post('/investment-funds/:id/redeem', auth.verifyToken, investmentFunds.redeemFromFund);
 
+// fund manager routes
+routes.post('/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.updateBalance);
+routes.patch('/investment-funds/:id', auth.verifyManager, investmentFunds.updateInvestmentFund);
+routes.post('/investment-funds', auth.verifyManager, investmentFunds.createInvestmentFund);
+routes.get('/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.fetchBalanceUpdates);
 
 module.exports = routes;
