@@ -1,6 +1,8 @@
 const { Model } = require('../database/index');
 const BigNumber = require('bignumber.js');
 const assert = require('assert');
+const { daysBetween } = require('../utils');
+
 class InvestmentFund extends Model {
   static get tableName() {
     return 'investment_funds';
@@ -11,7 +13,7 @@ class InvestmentFund extends Model {
   }
   
   static get virtualAttributes() {
-    return ['sharePrice'];
+    return ['sharePrice', 'shareCount', 'monthlyPerformance'];
   }
   
   get sharePrice() {
@@ -19,11 +21,32 @@ class InvestmentFund extends Model {
     if (!this.shares) {
       return price;
     }
-    const shares = this.shares.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0));
-    if (parseFloat(this.balance) === 0 || shares.isEqualTo(0)) {
+    if (parseFloat(this.balance) === 0 || this.shareCount === null || this.shareCount.isEqualTo(0)) {
       return 1;
     }
-    return shares.dividedBy(this.balance).toString();
+    return new BigNumber(this.balance).dividedBy(this.shareCount).toString();
+  }
+  
+  get shareCount() {
+    const s = this.shares;
+    return s ? s.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0)) : null;
+  }
+  
+  get monthlyPerformance() {
+    const b = this.balanceUpdates;
+    if (!b) {
+      return null;
+    }
+    
+    const updates = b.filter(u => daysBetween(u.createdAt, new Date()) < 30);
+
+    let performance = 0;
+    if (updates.length) { 
+      const firstPrice = parseFloat(updates[0].previousSharePrice);
+      const lastPrice = parseFloat(updates[updates.length - 1].updatedSharePrice);
+      performance = ((lastPrice - firstPrice) / firstPrice * 100).toFixed(2);
+    }
+    return performance;
   }
   
   async add(amount, trx) {

@@ -11,7 +11,8 @@ const { pick } = require('lodash');
 const subscriptionSchema = require('./validation/subscription.schema');
 
 const fetchAll = async(req, res) => {
-  const investmentFunds = await InvestmentFund.query().eager('[currency,creator,shares]');
+  const investmentFunds = await InvestmentFund.query()
+    .eager('[currency,creator,shares,balanceUpdates]');
   return res.status(200).json({ investmentFunds });
 };
 
@@ -99,6 +100,7 @@ const updateBalance = async (req, res) => {
   
   const investmentFund = await InvestmentFund.query()
     .where({ id })
+    .eager('shares')
     .first();
   
   if (!investmentFund) {
@@ -106,8 +108,14 @@ const updateBalance = async (req, res) => {
   }
   
   await transaction(knex, async (trx) => {
+    const previousSharePrice = investmentFund.sharePrice;
+    const previousBalance = investmentFund.balance;
+    investmentFund.balance = amount;
+    const updatedSharePrice = investmentFund.sharePrice;
     await investmentFund.$relatedQuery('balanceUpdates').insert({
-      previousBalance: investmentFund.balance,
+      previousSharePrice,
+      updatedSharePrice,
+      previousBalance,
       updatedBalance: amount,
     });
     await investmentFund.$query().update({ balance: amount });
@@ -163,12 +171,17 @@ const fetchShares = async (req, res) => {
 
 const fetchBalanceUpdates = async (req, res) => {
   const { id } = req.params;
-  const investmentFund = await InvestmentFund.query().eager('balanceUpdates').where({
-    id,
-    creatorId: req.user.id,
-  });
+  const investmentFund = await InvestmentFund.query()
+    .eager('balanceUpdates')
+    .where({
+      id,
+      creatorId: req.user.id,
+    }).first();
   
-  res.status(200).json({ success: true, balanceUpdates: investmentFund.balanceUpdates });
+  res.status(200).json({
+    success: true,
+    balanceUpdates: investmentFund.balanceUpdates
+  });
 };
 
 module.exports = {

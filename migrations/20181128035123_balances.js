@@ -7,6 +7,7 @@ exports.up = knex => knex.schema.createTable('balances', (table) => {
     .index();
   table.decimal('amount', 30, 15).notNullable();
   table.unique(['userId', 'currency_code']);
+  table.timestamps();
 });
 
 exports.down = knex => knex.schema.dropTableIfExists('balances');

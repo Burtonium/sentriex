@@ -9,6 +9,8 @@ exports.up = knex => knex.schema.createTable('investment_fund_balance_updates', 
   
   table.decimal('previous_balance', 30, 15).notNullable();
   table.decimal('updated_balance', 30, 15).notNullable();
+  table.decimal('previous_share_price', 30, 15).notNullable();
+  table.decimal('updated_share_price', 30, 15).notNullable();
   table.timestamps();
 });
 

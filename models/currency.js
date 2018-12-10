@@ -17,6 +17,19 @@ class Currency extends Model {
   toFixed(amount) {
     return BigNumber(amount).toFixed(this.precision, BigNumber.ROUND_DOWN);
   }
+  
+  static get relationMappings() {
+    return {
+      userAddresses: {
+        relation: Model.HasManyRelation,
+        modelClass: `${__dirname}/user_address`,
+        join: {
+          from: 'currencies.code',
+          to: 'user_addresses.currencyCode',
+        },
+      },
+    };
+  }
 }
 
 module.exports = Currency;

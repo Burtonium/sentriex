@@ -33,4 +33,10 @@ routes.patch('/investment-funds/:id', auth.verifyManager, investmentFunds.update
 routes.post('/investment-funds', auth.verifyManager, investmentFunds.createInvestmentFund);
 routes.get('/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.fetchBalanceUpdates);
 
+// admin routes
+routes.post('/currencies', auth.verifyAdmin, currencies.create);
+routes.patch('/currencies/:code', auth.verifyAdmin, currencies.patch);
+routes.post('/currencies/:code/addresses', auth.verifyAdmin, currencies.addAddresses);
+routes.get('/currencies/:code', auth.verifyAdmin, currencies.fetchCurrencyInfo);
+
 module.exports = routes;

@@ -28,6 +28,16 @@ class ServiceUnavailable extends Error {
   }
 }
 
+class NotImplemented extends Error {
+  get status() {
+    return 501;
+  }
+  
+  get message() {
+    'Not Implemented';
+  }
+}
+
 class RecaptchaFailed extends Unauthorized {
   get message() {
     return 'ReCAPTCHA failed';
@@ -189,6 +199,16 @@ class CurrencyAlreadyExists extends BadRequest {
   }
 }
 
+class NoAvailableAddresses extends NotImplemented {
+  get message() {
+    return 'No address available';
+  }
+  
+  get code() {
+    return 46;
+  }
+}
+
 module.exports = {
   ServiceUnavailable,
   NotFound,
@@ -210,4 +230,5 @@ module.exports = {
   CurrencyNotFound,
   InvalidCSRFToken,
   CurrencyAlreadyExists,
+  NoAvailableAddresses,
 };
