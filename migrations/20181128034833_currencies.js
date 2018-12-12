@@ -1,6 +1,6 @@
 exports.up = knex => knex.schema.createTable('currencies', (table) => {
   table.string('code', 10).primary();
-  table.enum('type', ['crypto', 'fiat']).notNullable();
+  table.enum('type', ['crypto', 'fiat']).defaultTo('crypto').notNullable();
   table.integer('precision').notNullable();
   table.string('label');
   table.string('icon');

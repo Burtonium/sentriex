@@ -2,6 +2,7 @@ const Mailer = require('@sendgrid/mail');
 const assert = require('assert');
 const { pick } = require('lodash');
 const { knex } = require('../database');
+const Currency = require('../models/currency');
 const PasswordReset = require('../models/password_reset');
 const Activation = require('../models/activation');
 const User = require('../models/user');
@@ -80,12 +81,14 @@ const register = async (req, res) => {
 
   const referred = referralCode
     ? (await User.query().where({ referralCode }).first()) : null;
-
-  const user = await User.query().insert({
+  
+  const currencies = await Currency.query();
+  const user = await User.query().insertGraph({
     email,
     password,
     username,
     referredBy: referred ? referred.id : null,
+    balances: currencies.map(c => ({ currencyCode: c.code })),
   });
 
   await sendActivationEmail(user);

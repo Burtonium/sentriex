@@ -4,6 +4,7 @@ const account = require('./account');
 const balances = require('./balances');
 const currencies = require('./currencies');
 const investmentFunds = require('./investment_funds');
+const deposit = require('./deposit');
 const routes = require('express').Router();
 
 routes.post('/authenticate', throttle({ rate: '5/s' }), auth.authenticate);
@@ -20,7 +21,12 @@ routes.post('/2fa/enable', auth.verifyToken, auth.enable2fa);
 routes.post('/2fa/disable', auth.verifyToken, auth.disable2fa);
 
 routes.get('/currencies', currencies.fetchAll);
+
 routes.get('/balances', auth.verifyToken, balances.fetchAll);
+
+routes.post('/generate-address/:currencyCode', auth.verifyToken, deposit.generateDepositAddress);
+routes.get('/deposit-addresses', auth.verifyToken, deposit.fetchDepositAddresses);
+routes.get('/deposits', auth.verifyToken, deposit.fetchMyDeposits);
 
 routes.get('/investment-funds', auth.verifyToken, investmentFunds.fetchAll);
 routes.get('/investment-fund-shares', auth.verifyToken, investmentFunds.fetchShares);
@@ -34,9 +40,12 @@ routes.post('/investment-funds', auth.verifyManager, investmentFunds.createInves
 routes.get('/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.fetchBalanceUpdates);
 
 // admin routes
-routes.post('/currencies', auth.verifyAdmin, currencies.create);
-routes.patch('/currencies/:code', auth.verifyAdmin, currencies.patch);
-routes.post('/currencies/:code/addresses', auth.verifyAdmin, currencies.addAddresses);
-routes.get('/currencies/:code', auth.verifyAdmin, currencies.fetchCurrencyInfo);
+routes.post('/admin/currencies', auth.verifyAdmin, currencies.create);
+routes.patch('/admin/currencies/:code', auth.verifyAdmin, currencies.patch);
+routes.post('/admin/currencies/:code/addresses', auth.verifyAdmin, deposit.addAddresses);
+routes.get('/admin/currencies/:code', auth.verifyAdmin, currencies.fetchCurrencyInfo);
+routes.get('/admin/deposit-addresses/:depositAddress', auth.verifyAdmin, deposit.findAddress);
+routes.post('/admin/deposits', auth.verifyAdmin, deposit.createDeposit);
+routes.get('/admin/deposits', auth.verifyAdmin, deposit.fetchDeposits);
 
 module.exports = routes;

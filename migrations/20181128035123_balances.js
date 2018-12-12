@@ -5,7 +5,7 @@ exports.up = knex => knex.schema.createTable('balances', (table) => {
   table.string('currency_code', 10).references('code').inTable('currencies').onUpdate('CASCADE')
     .onDelete('CASCADE')
     .index();
-  table.decimal('amount', 30, 15).notNullable();
+  table.decimal('amount', 30, 15).notNullable().defaultTo(0);
   table.unique(['userId', 'currency_code']);
   table.timestamps();
 });

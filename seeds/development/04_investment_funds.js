@@ -20,8 +20,8 @@ exports.seed = async (knex) => knex('investment_funds').insert([{
   creatorId: 1,
   currencyCode: 'BTC',
   balance: 0,
-  name: 'Illegal fund',
-  shortDescription: 'We steal from poor children to make you rich. Join now.',
+  name: 'Rainy day fund',
+  shortDescription: 'We make money on rainy days for some reason. Join now.',
 }, {
   creatorId: 1,
   currencyCode: 'BTC',

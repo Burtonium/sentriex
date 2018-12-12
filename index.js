@@ -15,7 +15,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 app.use(cors({
   origin: process.env.SITE_URL,
-  credentials: true
+  credentials: true,
 }));
 app.use(cookieParser());
 app.use(helmet());
