@@ -13,13 +13,13 @@ class InvestmentFundShares extends Model {
   
   async add(amount, trx) {
     this.amount = BigNumber(this.amount).plus(amount).toString();
-    return this.$query(trx).update({ amount: this.amount });
+    return this.$query(trx).forUpdate().update({ amount: this.amount });
   }
 
   async remove(amount, trx) {
     assert.ok(BigNumber(amount).isLessThanOrEqualTo(this.amount), `Trying to remove ${amount} from ${this.amount} of shares`);
     this.amount = BigNumber(this.amount).minus(amount).toString();
-    return this.$query(trx).update({ amount: this.amount });
+    return this.$query(trx).forUpdate().update({ amount: this.amount });
   }
   
   static get relationMappings() {

@@ -8,6 +8,20 @@ class Withdrawal extends Model {
   static get timestamp() {
     return true;
   }
+  
+  static get statuses() {
+    return {
+      PENDING: 'pending',
+      PENDING_EMAIL_VERIFICATION: 'pending_email_verification',
+      APPROVED: 'approved',
+      DECLINED: 'declined',
+      CANCELED: 'canceled',
+    };
+  }
+  
+  static get cancelableStatuses() {
+    return [this.statuses.PENDING, this.statuses.PENDING_EMAIL_VERIFICATION];
+  }
 
   static get relationMappings() {
     return {

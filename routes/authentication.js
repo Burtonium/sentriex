@@ -13,6 +13,15 @@ const cookieKeys = {
   auth: 'JWT-COOKIE'
 };
 
+const TOKEN_EXPIRY = process.env.TOKEN_EXPIRY || 60 * 60;
+  
+const CSRFOptions = {
+  expire: (new Date() + TOKEN_EXPIRY * 1000),
+  httpOnly: true,
+  sameSite: true,
+  secure: true,
+};
+
 const {
   RecaptchaFailed,
   UserNotActive,
@@ -45,7 +54,7 @@ const verifyToken = (req, res, next) => {
   const token = req.cookies[cookieKeys.auth]; // eslint-disable-line
   const headerCSRFToken = req.headers['x-csrf-token'];
   const cookieCSRFToken = req.cookies[cookieKeys.csrf]; // eslint-disable-line
-  
+
   if (!headerCSRFToken || (headerCSRFToken !== cookieCSRFToken)) {
     throw new InvalidCSRFToken();
   }
@@ -79,6 +88,27 @@ const verifyManager = (req, res, next) => {
   next();
 };
 
+const verify2fa = async (req, res, next) => {
+  assert.ok(req.user, 'check2fa missing req.user');
+  if (req.user.twofa) {
+    const token = req.body.twofaToken || req.query.twofaToken;
+    const user = await User.query().select('twofaSecret').where('id', req.user.id).first();
+    const verified = await user.verifyTwofa(token);
+
+    if (!verified) {
+      throw new InvalidTwofaToken();
+    }
+    req.twofaIsVerified = true;
+  }
+  next();
+};
+
+const generateToken = (user) => {
+  return jwt.sign({
+    user: user.toTokenDetails(),
+  }, process.env.JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+};
+
 const authenticate = async (req, res) => {
   const identifier = req.body.identifier.toLowerCase();
   const { password, twofaToken } = req.body;
@@ -101,30 +131,9 @@ const authenticate = async (req, res) => {
       throw new InvalidTwofaToken();
     }
   }
-
+  
   const CSRFToken = uuid();
-
-  const expirySeconds = 60 * 60;
-  
-  const userDetails = {
-    email: user.email,
-    id: user.id,
-    username: user.username,
-    active: user.active,
-    admin: user.type === 'admin',
-    manager: user.type === 'admin' || user.type === 'fund_manager',
-  };
-  
-  const encoded = jwt.sign({
-    user: userDetails,
-  }, process.env.JWT_SECRET, { expiresIn: expirySeconds });
-
-  const CSRFOptions = {
-    expire: (new Date() + expirySeconds * 1000),
-    httpOnly: true,
-    sameSite: true,
-    secure: true,
-  };
+  const encoded = generateToken(user);
 
   return res.status(200)
     .cookie(cookieKeys.csrf, CSRFToken, CSRFOptions)
@@ -132,19 +141,19 @@ const authenticate = async (req, res) => {
     .json({
       success: true,
       message: 'Authentication successful',
-      user: userDetails,
+      user: user.toTokenDetails(),
       CSRFToken
     });
 };
 
 const generate2faSecret = async (req, res) => {
   const secret = speakeasy.generateSecret({
-    length: parseInt(process.env.TWOFA_SECRET_LENGTH, 10) || 32,
-    name: process.env.APP_NAME || 'durango',
+    length: 32,
+    name: process.env.APP_NAME || 'sentriex',
   });
-  
+
   const url = await QRCode.toDataURL(secret.otpauth_url);
-  
+
   res.status(200).send({ url, secret: secret.base32 });
 };
 
@@ -154,7 +163,7 @@ const enable2fa = async (req, res) => {
 
   const user = await User.query().where({ id }).first();
 
-  if (user.twofaSecret) {
+  if (user.twofaIsEnabled) {
     throw new TwofaAlreadyEnabled();
   }
 
@@ -170,7 +179,10 @@ const enable2fa = async (req, res) => {
 
   await user.$query().update({ twofaSecret });
 
-  res.status(200).json({ success: true, message: 'Two factor authentication enabled' });
+  
+  res.status(200)
+    .cookie(cookieKeys.auth, generateToken(user), CSRFOptions) // refresh JWT state
+    .json({ success: true, message: 'Two factor authentication enabled' });
 };
 
 const disable2fa = async (req, res) => {
@@ -189,22 +201,12 @@ const disable2fa = async (req, res) => {
   }
 
   await user.$query().update({ twofaSecret: null });
+  
+  const encoded = generateToken(user);
 
-  res.status(200).json({ success: true, message: 'Two factor authentication disabled' });
-};
-
-const verify2fa = async (req, res, next) => {
-  assert.ok(req.user, 'check2fa missing req.user');
-  const user = await User.query().select('twofaSecret').where('id', req.user.id).first();
-  if (user.twofaSecret) {
-    const token = req.body.twofaToken || req.query.twofaToken;
-    const verified = await user.verifyTwofa(token);
-    if (!verified) {
-      throw new InvalidTwofaToken();
-    }
-    req.twofaIsVerified = true;
-  }
-  next();
+  res.status(200)
+    .cookie(cookieKeys.auth, encoded, CSRFOptions) // refresh JWT state
+    .json({ success: true, message: 'Two factor authentication disabled' });
 };
 
 module.exports = {

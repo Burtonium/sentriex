@@ -13,6 +13,18 @@ class User extends Password(Model) {
   get twofaIsEnabled() {
     return !!this.twofaSecret;
   }
+  
+  toTokenDetails() {
+    return {
+      email: this.email,
+      id: this.id,
+      username: this.username,
+      active: this.active,
+      admin: this.type === 'admin',
+      manager: this.type === 'admin' || this.type === 'fund_manager',
+      twofa: this.twofaIsEnabled,
+    };
+  }
 
   static get relationMappings() {
     return {

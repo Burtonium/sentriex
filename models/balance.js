@@ -10,14 +10,14 @@ class Balance extends Model {
   async add(amount, trx) {
     assert.ok(this.currency, 'Balance.add() requires currency precision');
     this.amount = this.currency.toFixed(BigNumber(this.amount).plus(amount));
-    return Balance.query(trx).where('id', this.id).update({ amount: this.amount });
+    return Balance.query(trx).forUpdate().where('id', this.id).update({ amount: this.amount });
   }
 
   async remove(amount, trx) {
     assert.ok(this.currency, 'Balance.add() requires currency precision');
     assert.ok(BigNumber(amount).isLessThanOrEqualTo(this.amount), `Trying to remove ${amount} from ${this.amount} of ${this.currencyCode}`);
     this.amount = this.currency.toFixed(BigNumber(this.amount).minus(amount));
-    return Balance.query(trx).where('id', this.id).update({ amount: this.amount });
+    return Balance.query(trx).forUpdate().where('id', this.id).update({ amount: this.amount });
   }
 
   static get relationMappings() {

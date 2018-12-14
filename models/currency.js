@@ -18,6 +18,11 @@ class Currency extends Model {
     return BigNumber(amount).toFixed(this.precision, BigNumber.ROUND_DOWN);
   }
   
+  format(amount) {
+    const symbol = this.unicodeSymbol;
+    return `${symbol || ''}${this.toFixed(amount)} ${this.code || ''}`;
+  }
+  
   static get relationMappings() {
     return {
       userAddresses: {

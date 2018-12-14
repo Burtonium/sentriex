@@ -52,14 +52,14 @@ class InvestmentFund extends Model {
   async add(amount, trx) {
     assert.ok(this.currency, 'Balance.add() requires currency precision');
     this.balance = this.currency.toFixed(BigNumber(this.balance).plus(amount));
-    return this.$query(trx).update({ balance: this.balance });
+    return this.$query(trx).forUpdate().update({ balance: this.balance });
   }
 
   async remove(amount, trx) {
     assert.ok(this.currency, 'Balance.add() requires currency precision');
     assert.ok(BigNumber(amount).isLessThanOrEqualTo(this.balance), `Trying to remove ${amount} from ${this.balance} of investmentFund:${this.id}`);
     this.balance = this.currency.toFixed(BigNumber(this.balance).minus(amount));
-    return this.$query(trx).update({ balance: this.balance });
+    return this.$query(trx).forUpdate().update({ balance: this.balance });
   }
 
   static get relationMappings() {

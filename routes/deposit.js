@@ -63,7 +63,8 @@ const fetchMyDeposits = async (req, res) => {
   const { currencyCode } = req.query;
   const deposits = await Deposit.query()
     .where('userId', req.user.id)
-    .where('currencyCode', currencyCode)
+    .skipUndefined()
+    .andWhere('currencyCode', currencyCode)
     .orderBy('createdAt', 'desc')
     .limit(10);
   return res.status(200).json({ success: true, deposits });
@@ -73,6 +74,7 @@ const fetchDeposits = async (req, res) => {
   const { currencyCode } = req.query;
 
   const deposits = await Deposit.query()
+    .skipUndefined()
     .where('currencyCode', currencyCode)
     .orderBy('createdAt', 'desc')
     .limit(20);
@@ -100,6 +102,7 @@ const createDeposit = async (req, res) => {
       await Balance.query(trx).insert({ currencyCode, amount, userId });
     } else {
       await Balance.query(trx)
+        .forUpdate()
         .update({ amount: knex.raw(`amount + ?`, amount) })
         .where({ currencyCode, userId });
     }

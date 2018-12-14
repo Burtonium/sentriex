@@ -1,6 +1,6 @@
-const Mailer = require('@sendgrid/mail');
 const assert = require('assert');
 const { pick } = require('lodash');
+const Mailer = require('./mailer');
 const { knex } = require('../database');
 const Currency = require('../models/currency');
 const PasswordReset = require('../models/password_reset');
@@ -18,8 +18,6 @@ const {
   InvalidOldPassword,
   InvalidTwofaToken,
 } = require('./errors');
-
-Mailer.setApiKey(process.env.SENDGRID_API_KEY);
 
 const sendActivationEmail = async (user) => {
   assert(user.id && user.email, 'Invalid user');
@@ -91,7 +89,7 @@ const register = async (req, res) => {
     balances: currencies.map(c => ({ currencyCode: c.code })),
   });
 
-  await sendActivationEmail(user);
+  sendActivationEmail(user);
   return res.status(201).json(response);
 };
 
