@@ -81,15 +81,17 @@ const create = async (req, res) => {
   const twofaEnabledAndVerified = req.user.twofa && req.twofaIsVerified;
   const { PENDING, PENDING_EMAIL_VERIFICATION } = Withdrawal.statuses;
   const status = twofaEnabledAndVerified ? PENDING : PENDING_EMAIL_VERIFICATION;
-
+  const balance = await Balance.query()
+    .eager('currency')
+    .where({
+      currencyCode,
+      userId: req.user.id,
+    }).first();
+  assert(balance, 'Balance required');
+  
   let withdrawal;
   await transaction(knex, async (trx) => {
-    const balance = await Balance.query()
-      .eager('currency')
-      .where({
-        currencyCode,
-        userId: req.user.id,
-      }).first();
+
 
     [withdrawal] = await Promise.all([
       Withdrawal.query().insert({

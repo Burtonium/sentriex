@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
-const { errors } = require('celebrate');
+const { isCelebrate } = require('celebrate');
 const routes = require('./routes');
 const http = require('http').createServer(app);
 const production = process.env.NODE_ENV === 'production';
@@ -21,9 +21,17 @@ app.use(cookieParser());
 app.use(helmet());
 app.use(helmet.hidePoweredBy());
 app.use('/', routes);
-app.use(errors());
+
+app.use((err, req, res, next) => {
+  if (isCelebrate(err)) {
+    err = { status: 400, message: err.details[0].message, ...err,  };
+  }
+  next(err);
+});
+
 app.use((err, req, res, next) => {
   res.status(err.status || 500).json({
+    success: false,
     message: err.message || 'Something went wrong',
     error: production ? true : err,
     code: err.code,

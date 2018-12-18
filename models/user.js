@@ -1,5 +1,6 @@
 const Password = require('objection-password-argon2')({ allowEmptyPassword: true });
 const Model = require('./twofa_cipher_model');
+const { omit } = require('lodash');
 
 class User extends Password(Model) {
   static get tableName() {
@@ -12,6 +13,12 @@ class User extends Password(Model) {
   
   get twofaIsEnabled() {
     return !!this.twofaSecret;
+  }
+  
+  $formatJson(json) {
+    json = super.$formatJson(json);
+    
+    return omit(json, ['twofaSecret', 'password']);
   }
   
   toTokenDetails() {
