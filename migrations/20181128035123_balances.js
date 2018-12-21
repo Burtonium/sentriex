@@ -1,7 +1,7 @@
 exports.up = knex => knex.schema.createTable('balances', (table) => {
   table.bigIncrements().primary();
   table.bigInteger('user_id').unsigned().references('id').inTable('users')
-    .onDelete('CASCADE');
+    .onDelete('CASCADE').index();
   table.string('currency_code', 10).references('code').inTable('currencies').onUpdate('CASCADE')
     .onDelete('CASCADE')
     .index();

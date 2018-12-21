@@ -6,7 +6,7 @@ exports.up = knex => knex.schema.createTable('users', (table) => {
   table.enum('type', ['user', 'fund_manager', 'admin']).defaultTo('user').index().notNullable();
   table.binary('twofa_secret');
   table.uuid('referral_code').notNullable().unique().defaultTo(knex.raw('uuid_generate_v4()'));
-  table.bigInteger('referred_by').unsigned().references('id').inTable('users');
+  table.bigInteger('referred_by').unsigned().references('id').inTable('users').index();
   table.boolean('active').defaultTo(false).index().notNullable();
   table.timestamp('activated_at');
   table.timestamps();

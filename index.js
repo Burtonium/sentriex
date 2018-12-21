@@ -9,7 +9,7 @@ const { isCelebrate } = require('celebrate');
 const routes = require('./routes');
 const http = require('http').createServer(app);
 const production = process.env.NODE_ENV === 'production';
-const port = process.env.PORT || 8081;
+const port = 8081// process.env.PORT || 8081;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());

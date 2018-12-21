@@ -1,12 +1,18 @@
 const { Model } = require('../database/index');
+const BigNumber = require('bignumber.js');
 
-class InvestmentFundRequest extends Model {
+const Feeable = require('./feeable')({
+  feeableField: 'amount',
+  feeRatePercent: 1,
+});
+
+class InvestmentFundRequest extends Feeable(Model) {
   static get tableName() {
     return 'investment_fund_requests';
   }
 
   static get virtualAttributes() {
-    return ['isCancelable'];
+    return ['isCancelable', 'feeAmount', 'siteFees', 'profitShare'];
   }
 
   static get timestamp() {
@@ -46,6 +52,31 @@ class InvestmentFundRequest extends Model {
   get refundable() {
     return !this.refunded && this.type === InvestmentFundRequest.types.SUBSCRIPTION;
   }
+  
+  get feeAmount() {
+    if (!this.fees || !this.profitShares) {
+      return null;
+    }
+    const feeAmount = this.fees.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0));
+    const profitSharesTaken = this.profitShares.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0));
+    return feeAmount.plus(profitSharesTaken).toString();
+  }
+  
+  get siteFees() {
+    if (!this.fees) {
+      return null;
+    }
+    const feeAmount = this.fees.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0));
+    return feeAmount.toString();
+  }
+  
+  get profitShare() {
+    if (!this.profitShares) {
+      return null;
+    }
+    const profitSharesTaken = this.profitShares.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0));
+    return profitSharesTaken.toString();
+  }
 
   static get relationMappings() {
     return {
@@ -65,6 +96,22 @@ class InvestmentFundRequest extends Model {
           to: 'investment_fund_requests.userId',
         },
       },
+      fees: {
+        relation: Model.HasManyRelation,
+        modelClass: `${__dirname}/fees`,
+        join: {
+          from: 'investment_fund_requests.id',
+          to: 'fees.investment_fund_request_id',
+        },
+      },
+      profitShares: {
+        relation: Model.HasManyRelation,
+        modelClass: `${__dirname}/investment_fund_profit_share`,
+        join: {
+          from: 'investment_fund_requests.id',
+          to: 'investment_fund_profit_shares.investment_fund_request_id',
+        },
+      }
     };
   }
 }

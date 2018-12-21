@@ -1,10 +1,11 @@
 const { Model } = require('../database/index');
 const BigNumber = require('bignumber.js');
 const assert = require('assert');
-const { daysBetween } = require('../utils');
+const { daysBetween, percentDifference } = require('../utils');
 const { transaction } = require('objection');
 const { knex } = require('../database');
 const InvestmentFundRequest = require('./investment_fund_request');
+const Balance = require('./balance');
 
 class InvestmentFund extends Model {
   static get tableName() {
@@ -47,7 +48,7 @@ class InvestmentFund extends Model {
     if (updates.length) { 
       const firstPrice = parseFloat(updates[0].previousSharePrice);
       const lastPrice = parseFloat(updates[updates.length - 1].updatedSharePrice);
-      performance = ((lastPrice - firstPrice) / firstPrice * 100).toFixed(2);
+      performance = percentDifference(firstPrice, lastPrice);
     }
     return performance;
   }
@@ -68,7 +69,7 @@ class InvestmentFund extends Model {
   async approveSubscription(investmentFundRequest) {
     assert.ok(this.shares, 'Shares must be eager loaded');
     const { userId } = investmentFundRequest;
-    const amount = investmentFundRequest.requestAmount;
+    const amount = investmentFundRequest.amount;
     
     let shareBalance = this.shares && this.shares.find(sb => sb.userId === userId);
     if (!shareBalance) {
@@ -85,7 +86,11 @@ class InvestmentFund extends Model {
     const { APPROVED } = InvestmentFundRequest.statuses;
     return transaction(knex, async (trx) => {
       return Promise.all([
-        investmentFundRequest.$query(trx).update({ status: APPROVED }),
+        investmentFundRequest.$query(trx).update({
+          status: APPROVED,
+          shares: shareAmount.toString(),
+          sharePrice: this.sharePrice,
+        }),
         shareBalance.add(shareAmount.toString(), trx),
         this.add(amount, trx),
       ]);
@@ -100,7 +105,7 @@ class InvestmentFund extends Model {
     assert.ok(balance, 'User balance not found');
     
     const { DECLINED } = InvestmentFundRequest.statuses;
-    const amount = investmentFundRequest.requestAmount;
+    const amount = investmentFundRequest.amount;
     return transaction(knex, async (trx) => {
       return Promise.all([
         balance.add(amount, trx),
@@ -111,16 +116,19 @@ class InvestmentFund extends Model {
   
   async approveRedemption(investmentFundRequest) {
     assert.ok(this.shares, 'Shares must be eager loaded');
-    let amount = investmentFundRequest.requestAmount;
-    let shareAmount = (new BigNumber(amount)).dividedBy(this.sharePrice);
+    let amount = investmentFundRequest.amount
+    const sharePrice = this.sharePrice;
+    let shareAmount = (new BigNumber(amount)).dividedBy(sharePrice);
     const userShareBalance = this.shares.find(s => s.userId === investmentFundRequest.userId);
     assert.ok(userShareBalance, 'User has no shares to redeem');
     
     if (!amount) {
       const percent = investmentFundRequest.requestPercent;
-      assert.ok(percent, 'Both requestPercent and requestAmount not found on request.');
+      assert.ok(percent, 'Both requestPercent and amount not found on request.');
       shareAmount = (new BigNumber(percent)).dividedBy(100).times(userShareBalance.amount);
-      amount = shareAmount.times(this.sharePrice).toString();
+      amount = shareAmount.times(sharePrice);
+    } else {
+      amount = new BigNumber(amount);
     }
     
     assert.ok(investmentFundRequest &&
@@ -130,12 +138,61 @@ class InvestmentFund extends Model {
     assert.ok(balance, 'User balance not found');
     
     const { APPROVED } = InvestmentFundRequest.statuses;
+    const { SUBSCRIPTION } = InvestmentFundRequest.types;
+    
+    // calculate profit
+    const userId = investmentFundRequest.user.id;
+    const userSubscriptions = await InvestmentFundRequest.query().where({
+      type: SUBSCRIPTION,
+      status: APPROVED,
+      refunded: false,
+      userId,
+    }).orderBy('createdAt', 'desc');
+    
+    let remaining = new BigNumber(userShareBalance.amount);
+    let sharesProfit = new BigNumber(0);
+    userSubscriptions.every(s => {
+      assert(s.shares, 'Subscriptions need to have shares recorded');
+      const unredeemedShares = remaining.isGreaterThan(s.shares) ? remaining.minus(s.shares) : new BigNumber(s.shares);
+      const profitPercent = percentDifference(s.sharePrice, sharePrice);
+      sharesProfit = sharesProfit.plus(unredeemedShares.times(profitPercent / 100));
+      remaining = remaining.minus(s.shares);
+      return remaining.isGreaterThan(0);
+    });
+    
+    const totalProfitPercent = sharesProfit.dividedBy(userShareBalance.amount);
+    const redeemProfitAmount = totalProfitPercent.times(amount);
+    
+    const settings = await knex('investment_fund_settings').select().first();
+    
     return transaction(knex, async (trx) => {
+      const sitesCut = redeemProfitAmount.times(settings.siteRedeemProfitPercent).toString();
+      const managersCut = redeemProfitAmount.times(settings.fundManagerRedeemProfitPercent).toString();
+      const amountMinusFees = amount.minus(managersCut).minus(sitesCut).toString();
+      
+      await investmentFundRequest.$query(trx)
+        .context({
+          createFees: true,
+          feeAmountOverride: sitesCut.toString(),
+        })
+        .update({ amount: amountMinusFees, status: APPROVED });
+      
+      
+      const managersBalance = await Balance.query().eager('currency').where({
+          userId: this.creatorId,
+          currencyCode: this.currencyCode,
+        }).first();
+        
       return Promise.all([
-        investmentFundRequest.$query(trx).update({ requestAmount: amount, status: APPROVED }),
+        this.$relatedQuery('profitShares', trx).insert({
+          amount: managersCut,
+          userId: investmentFundRequest.userId,
+          investmentFundRequestId: investmentFundRequest.id,
+        }),
+        managersBalance.add(managersCut, trx),
         userShareBalance.remove(shareAmount.toString(), trx),
-        balance.add(amount, trx),
-        this.remove(amount, trx),
+        balance.add(amountMinusFees.toString(), trx),
+        this.remove(amount.toString(), trx),
       ]);
     });
   }
@@ -185,6 +242,14 @@ class InvestmentFund extends Model {
         join: {
           from: 'investment_funds.id',
           to: 'investment_fund_requests.investmentFundId',
+        },
+      },
+      profitShares: {
+        relation: Model.HasManyRelation,
+        modelClass: `${__dirname}/investment_fund_profit_share`,
+        join: {
+          from: 'investment_funds.id',
+          to: 'investment_fund_profit_shares.investmentFundId',
         },
       }
     };

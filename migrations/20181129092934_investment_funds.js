@@ -6,16 +6,16 @@ exports.up = knex => knex.schema.createTable('investment_funds', (table) => {
     .inTable('users')
     .onDelete('CASCADE')
     .index();
-  table.string('name').notNullable();
-  table.enum('risk_level', ['high', 'medium', 'low']).notNullable().defaultTo('high').index();
-  table.string('short_description');
-  table.string('detailed_description');
-    table.string('currency_code', 10)
+  table.string('currency_code', 10)
     .references('code')
     .inTable('currencies')
     .onUpdate('CASCADE')
     .onDelete('CASCADE')
     .index();
+  table.string('name').notNullable();
+  table.enum('risk_level', ['high', 'medium', 'low']).notNullable().defaultTo('high').index();
+  table.string('short_description');
+  table.string('detailed_description');
   table.decimal('balance', 30, 15).defaultTo(0).notNullable();
   table.timestamps();
 });

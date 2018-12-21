@@ -38,7 +38,7 @@ class CannotPatchRequest extends BadRequest {
 const sendRequestAuthenticationEmail = async investmentFundRequest => {
   const {
     authenticationToken,
-    requestAmount,
+    amount,
     userId,
     type,
     investmentFundId
@@ -52,7 +52,7 @@ const sendRequestAuthenticationEmail = async investmentFundRequest => {
 
   const { name } = investmentFund;
   const { email } = user;
-  const formattedAmount = currency.format(requestAmount);
+  const formattedAmount = currency.format(amount);
   const url = `${process.env.SITE_URL}/investment-fund-requests/activate/${authenticationToken}`;
   const msg = {
     to: email,
@@ -104,7 +104,7 @@ const subscribeToFund = async (req, res) => {
       investmentFund.$relatedQuery('requests', trx).insert({
         userId,
         type: 'subscription',
-        requestAmount: amount,
+        amount,
         status,
       }).returning('*'),
       balance.remove(amount, trx),
@@ -141,7 +141,7 @@ const redeemFromFund = async (req, res) => {
   const request = await investmentFund.$relatedQuery('requests').insert({
     userId,
     type: 'redemption',
-    requestAmount: amount,
+    amount,
     requestPercent: percent,
     status,
   }).returning('*');
@@ -180,10 +180,15 @@ const cancelRequest = async (req, res) => {
 
     assert(balance, 'Balance not found');
     const { CANCELED } = InvestmentFundRequest.statuses;
-    return Promise.all([
-      request.refundable && balance.add(request.requestAmount, trx),
-      request.$query(trx).update({ status: CANCELED, refunded: request.refundable }),
-    ]);
+    
+    const result = await request.$query(trx).update({
+      status: CANCELED,
+      refunded: request.refundable
+    }).returning('*');
+    
+    if (request.refundable){
+      await balance.add(result.amount, trx);
+    } 
   });
 
   return res.status(200).json({ success: true });
@@ -248,10 +253,10 @@ const activateRequest = async (req, res) => {
 const fetchRequests = async (req, res) => {
   const { investmentFundId } = req.query;
   const requests = await InvestmentFundRequest.query()
-    .eager('investmentFund')
-    .where('userId', req.user.id)
+    .joinEager('[investmentFund,fees,profitShares]')
+    .where('investmentFundRequests.userId', req.user.id)
     .skipUndefined()
-    .where({ investmentFundId })
+    .where('investmentFundRequests.investmentFundId', investmentFundId)
     .orderBy('createdAt', 'desc');
 
   return res.status(200).json({ success: true, requests });
@@ -261,8 +266,8 @@ const fetchAllRequests = async (req, res) => {
   const { investmentFundId } = req.query;
   const requests = await InvestmentFundRequest.query()
     .skipUndefined()
-    .where({ investmentFundId })
-    .eager('[investmentFund, user]')
+    .where('investmentFundRequests.investmentFundId', investmentFundId)
+    .joinEager('[investmentFund,user,fees,profitShares]')
     .orderBy('createdAt', 'desc');
 
   return res.status(200).json({ success: true, requests });
@@ -286,13 +291,13 @@ const updateBalance = async (req, res) => {
     const previousBalance = investmentFund.balance;
     investmentFund.balance = amount;
     const updatedSharePrice = investmentFund.sharePrice;
-    await investmentFund.$relatedQuery('balanceUpdates').insert({
+    await investmentFund.$relatedQuery('balanceUpdates', trx).insert({
       previousSharePrice,
       updatedSharePrice,
       previousBalance,
       updatedBalance: amount,
     });
-    await investmentFund.$query().update({ balance: amount });
+    await investmentFund.$query(trx).update({ balance: amount });
   });
 
   return res.status(200).json({ success: true });

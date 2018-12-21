@@ -54,11 +54,10 @@ const sendWithdrawalAuthenticationEmail = async withdrawal => {
 const fetchMyWithdrawals = async (req, res) => {
   const { currencyCode } = req.query;
   const withdrawals = await Withdrawal.query()
-    .orderBy('createdAt', 'desc')
+    .joinEager('[fees]') 
     .where('userId', req.user.id)
     .skipUndefined()
-    .andWhere('currencyCode', currencyCode)
-    .limit(20);
+    .andWhere('currencyCode', currencyCode);
 
   return res.status(200).json({ success: true, withdrawals });
 };
@@ -66,18 +65,17 @@ const fetchMyWithdrawals = async (req, res) => {
 const fetchWithdrawals = async (req, res) => {
   const { currencyCode } = req.query;
   const withdrawals = await Withdrawal.query()
-    .where({ currencyCode })
+    .joinEager('[fees,user]')
     .skipUndefined()
-    .eager('user')
+    .where({ currencyCode })
     .orderBy('createdAt', 'desc')
     .limit(20);
-
+    
   return res.status(200).json({ success: true, withdrawals });
 };
 
 const create = async (req, res) => {
   const { currencyCode, address, amount } = req.body;
-  
   const twofaEnabledAndVerified = req.user.twofa && req.twofaIsVerified;
   const { PENDING, PENDING_EMAIL_VERIFICATION } = Withdrawal.statuses;
   const status = twofaEnabledAndVerified ? PENDING : PENDING_EMAIL_VERIFICATION;
@@ -91,16 +89,14 @@ const create = async (req, res) => {
   
   let withdrawal;
   await transaction(knex, async (trx) => {
-
-
     [withdrawal] = await Promise.all([
-      Withdrawal.query().insert({
+      Withdrawal.query(trx).context({ createFees: true }).insert({
         currencyCode,
         userId: req.user.id,
         status,
         amount,
         address,
-      }),
+      }).returning('*'),
       balance.remove(amount, trx),
     ]);
   });
@@ -152,11 +148,11 @@ const cancel = async (req, res) => {
       .first();
 
     assert(balance, 'Balance not found');
-
-    return Promise.all([
-      balance.add(withdrawal.amount, trx),
-      withdrawal.$query(trx).update({ status: Withdrawal.statuses.CANCELED, refunded: true }),
-    ]);
+    const result = await withdrawal.$query(trx)
+      .context({ refundFees: true })
+      .update({ status: Withdrawal.statuses.CANCELED, refunded: true })
+      .returning('*');
+    await balance.add(result.amount, trx);
   });
 
   return res.status(200).json({ success: true, message: 'Canceled transfer request' });
@@ -186,11 +182,13 @@ const patch = async (req, res) => {
     }
     
     await Promise.all([
-      withdrawal.$query(trx).skipUndefined().update({ 
-        status,
-        txId,
-        refunded: refundUser || undefined,
-      }),
+      withdrawal.$query(trx)
+        .context({ refundFees: refundUser })
+        .skipUndefined().update({ 
+          status,
+          txId,
+          refunded: refundUser || undefined,
+        }),
       refundUser && balance.add(withdrawal.amount, trx),
     ]);
   });

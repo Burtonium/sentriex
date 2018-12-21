@@ -14,7 +14,14 @@ const hoursBetween = (date1, date2) => {
   return Math.round(diff / hour);
 };
 
+const percentDifference = (a, b) => {
+  const first = parseFloat(a);
+  const second = parseFloat(b);
+  return (((second - first) / first) * 100).toFixed(2);
+};
+
 module.exports = {
   daysBetween,
   hoursBetween,
+  percentDifference,
 };

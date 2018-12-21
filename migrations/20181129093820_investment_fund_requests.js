@@ -5,18 +5,20 @@ exports.up = knex => knex.schema.createTable('investment_fund_requests', (table)
     .references('id')
     .inTable('investment_funds')
     .onDelete('CASCADE')
+    .notNullable()
     .index();
   table.bigInteger('user_id')
     .unsigned()
     .references('id')
     .inTable('users')
     .onDelete('CASCADE')
+    .notNullable()
     .index();
     
   table.enum('type', ['redemption', 'subscription']).notNullable().index();
   table.enum('status', ['pending', 'pending_email_verification', 'approved', 'declined', 'canceled']).notNullable().defaultTo('pending_email_verification').index();
   table.boolean('refunded').defaultTo(false).index();
-  table.decimal('request_amount', 30, 15);
+  table.decimal('amount', 30, 15);
   table.decimal('request_percent', 5, 2);
   table.decimal('shares', 30, 15);
   table.decimal('share_price', 30, 15);
