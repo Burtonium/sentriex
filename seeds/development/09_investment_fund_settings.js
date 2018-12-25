@@ -4,5 +4,7 @@ exports.seed = async knex => {
     fundManagerRedeemProfitPercent: 0.3,
     siteRedeemProfitPercent: 0.1,
     userRedeemProfitPercent: 0.6,
+    referralRedeemProfitPercent: 0.01,
+    withdrawalFeeRate: 0.01,
   });
 };

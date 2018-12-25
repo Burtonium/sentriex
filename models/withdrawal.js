@@ -1,8 +1,12 @@
-const { Model } = require('../database/index');
+const { Model, knex } = require('../database/index');
 const BigNumber = require('bignumber.js');
 const Feeable = require('./feeable')({
   feeableField: 'amount',
-  feeRatePercent: 1,
+  feeRate: async () => { 
+    const { withdrawalFeeRate } = await knex('investmentFundSettings').select('withdrawalFeeRate').first();
+    console.log(withdrawalFeeRate);
+    return parseFloat(withdrawalFeeRate);
+  },
 });
 
 class Withdrawal extends Feeable(Model) {

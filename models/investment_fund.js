@@ -116,7 +116,7 @@ class InvestmentFund extends Model {
   
   async approveRedemption(investmentFundRequest) {
     assert.ok(this.shares, 'Shares must be eager loaded');
-    let amount = investmentFundRequest.amount
+    let amount = investmentFundRequest.amount;
     const sharePrice = this.sharePrice;
     let shareAmount = (new BigNumber(amount)).dividedBy(sharePrice);
     const userShareBalance = this.shares.find(s => s.userId === investmentFundRequest.userId);

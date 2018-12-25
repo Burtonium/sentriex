@@ -183,7 +183,7 @@ const resetPassword = async (req, res) => {
 
 const formatAccount = async (user) => {
   return {
-    ...pick(user, ['username', 'email', 'createdAt', 'updatedAt']),
+    ...pick(user, ['username', 'email', 'referralCode', 'createdAt', 'updatedAt']),
     twofa: !!user.twofaSecret,
   };
 };

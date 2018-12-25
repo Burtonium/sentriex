@@ -4,8 +4,16 @@ module.exports = (options) => {
   options = Object.assign({
     feeableField: null,
     feesTable: 'fees',
-    feeRatePercent: 0,
-    calculateFees: request => request[options.feeableField] * (options.feeRatePercent / 100),
+    feeRate: 0,
+    calculateFees: async request => {
+      let rate = 0;
+      if (typeof options.feeRate === 'function') {
+        rate = await options.feeRate();
+      } else {
+        rate = options.feeRate;
+      }
+      return request[options.feeableField] * rate;
+    },
   }, options);
 
   return (Model) => {
