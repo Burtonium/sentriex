@@ -21,7 +21,7 @@ app.use(cors({
 app.use(cookieParser());
 app.use(helmet());
 app.use(helmet.hidePoweredBy());
-app.use('/', routes);
+app.use('/api/v1', routes);
 
 app.use((err, req, res, next) => {
   if (isCelebrate(err)) {
