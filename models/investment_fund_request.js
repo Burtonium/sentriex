@@ -12,7 +12,7 @@ class InvestmentFundRequest extends Feeable(Model) {
   }
 
   static get virtualAttributes() {
-    return ['isCancelable', 'feeAmount', 'siteFees', 'profitShare'];
+    return ['isCancelable', 'isLocked', 'feeAmount', 'siteFees', 'profitShare'];
   }
 
   static get timestamp() {
@@ -46,7 +46,7 @@ class InvestmentFundRequest extends Feeable(Model) {
 
   get isLocked() {
     const { APPROVED, DECLINED, CANCELED } = InvestmentFundRequest.statuses;
-    return [APPROVED, DECLINED, CANCELED].includes(this.status);
+    return this.refunded || [APPROVED, DECLINED, CANCELED].includes(this.status);
   }
 
   get refundable() {

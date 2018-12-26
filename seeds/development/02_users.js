@@ -23,5 +23,14 @@ exports.seed = async (knex) => User.query().insert([{
   type: 'user',
   password: 'testuser',
   active: true,
-  activatedAt: new Date()
+  activatedAt: new Date(),
+}, {
+  id: 3,
+  email: 'referral@sentriex.com',
+  username: 'test_referral',
+  type: 'user',
+  password: 'testreferral',
+  active: true,
+  activatedAt: new Date(),
+  referredBy: 2,
 }]);

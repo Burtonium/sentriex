@@ -6,6 +6,7 @@ const { transaction } = require('objection');
 const { knex } = require('../database');
 const InvestmentFundRequest = require('./investment_fund_request');
 const Balance = require('./balance');
+const User = require('./user');
 
 class InvestmentFund extends Model {
   static get tableName() {
@@ -166,9 +167,37 @@ class InvestmentFund extends Model {
     const settings = await knex('investment_fund_settings').select().first();
     
     return transaction(knex, async (trx) => {
-      const sitesCut = redeemProfitAmount.times(settings.siteRedeemProfitPercent).toString();
+      let sitesCutPercent = settings.siteRedeemProfitPercent;
+      
+      // Calculate and pay out referral cut
+      const { referredBy } = investmentFundRequest.user;
+      let referralCut = 0;
+      if (referredBy) {
+        const referralCutPercent = settings.referralRedeemProfitPercent;
+        sitesCutPercent -= settings.referralRedeemProfitPercent;
+        const referringUser = await User.query(trx)
+          .where('id', referredBy)
+          .eager('balances.currency')
+          .first();
+          
+        if (referringUser) {
+          referralCut = redeemProfitAmount.times(referralCutPercent).toString();
+          await knex('referral_payments').transacting(trx).insert({
+            payeeId: referringUser.id,
+            referralId: userId,
+            redemptionId: investmentFundRequest.id,
+            amount: referralCut,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+          
+          const balance = referringUser.balances.find(b => b.currencyCode === this.currencyCode);
+          await balance.add(referralCut, trx);
+        }
+      } 
+      const sitesCut = redeemProfitAmount.times(sitesCutPercent).toString();
       const managersCut = redeemProfitAmount.times(settings.fundManagerRedeemProfitPercent).toString();
-      const amountMinusFees = amount.minus(managersCut).minus(sitesCut).toString();
+      const amountMinusFees = amount.minus(managersCut).minus(sitesCut).minus(referralCut).toString();
       
       await investmentFundRequest.$query(trx)
         .context({
