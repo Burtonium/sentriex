@@ -8,8 +8,9 @@ const helmet = require('helmet');
 const { isCelebrate } = require('celebrate');
 const routes = require('./routes');
 const http = require('http').createServer(app);
-const production = process.env.NODE_ENV === 'production';
-const port = 8081// process.env.PORT || 8081;
+const env = process.env.NODE_ENV || 'development';
+const production = env === 'production';
+const port = process.env.PORT || 8081;
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -41,7 +42,7 @@ app.use((err, req, res, next) => {
 });
 
 http.listen(port, () => {
-  console.log(`Listening on ${port}`); // eslint-disable-line
+  console.log(`Listening on ${port} in ${env} mode`); // eslint-disable-line
 });
 
 module.exports = http;
