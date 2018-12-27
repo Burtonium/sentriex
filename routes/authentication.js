@@ -37,11 +37,20 @@ const {
 const validateRecaptcha = async (req, res, next) => {
   const response = req.body.recaptcha;
   const secret = process.env.RECAPTCHA_SECRET_KEY;
-  const verificationUrl = new URL('https://www.google.com/recaptcha/api/siteverify');
-  verificationUrl.searchParams.set('secret', secret);
-  verificationUrl.searchParams.set('response', response);
-
-  const recaptchaResponse = JSON.parse(await request(verificationUrl.href));
+  const remoteip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  
+  const options = {
+    method: 'POST',
+    uri: 'https://www.google.com/recaptcha/api/siteverify',
+    formData: {
+      secret,
+      response,
+      remoteip,
+    },
+    json: true,
+  };
+  
+  const recaptchaResponse = await request(options);
 
   if (!recaptchaResponse.success) {
     throw new RecaptchaFailed();
