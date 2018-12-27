@@ -158,7 +158,7 @@ const authenticate = async (req, res) => {
 const generate2faSecret = async (req, res) => {
   const secret = speakeasy.generateSecret({
     length: 32,
-    name: process.env.APP_NAME || 'sentriex',
+    name: `sentriex (${req.user.email})`,
   });
 
   const url = await QRCode.toDataURL(secret.otpauth_url);

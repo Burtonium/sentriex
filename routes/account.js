@@ -150,33 +150,22 @@ const requestPasswordReset = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
-  const { newPassword, oldPassword, email, twofaToken } = req.body;
-
-  if (oldPassword && twofaToken) {
-    const user = await User.query().where({ email }).first();
-    if (!await user.verifyTwofa(twofaToken)) {
-      throw new InvalidTwofaToken();
-    }
-    if (!await user.verifyPassword(oldPassword)) {
-      throw new InvalidOldPassword();
-    }
-    await user.$query().update({ password: newPassword });
-  } else {
-    const resetToken  = req.params.resetToken || req.body.resetToken;
-    const reset = await PasswordReset.query().eager('user').where({
-      token: resetToken,
-      used: false
-    }).whereRaw('created_at >= (now() - interval \'1 hour\')');
-    
-    if (!reset) {
-      throw new InvalidResetToken();
-    }
-    
-    await Promise.all([
-      reset.$query().update({ used: true }),
-      reset.user.$query().update({ password: newPassword })
-    ]);
+  const { newPassword } = req.body;
+  const resetToken  = req.params.resetToken || req.body.resetToken;
+  const reset = await PasswordReset.query().eager('user').where({
+    token: resetToken,
+    used: false
+  }).whereRaw('created_at >= (now() - interval \'1 hour\')')
+  .first();
+  
+  if (!reset) {
+    throw new InvalidResetToken();
   }
+
+  await Promise.all([
+    reset.$query().update({ used: true }),
+    reset.user.$query().update({ password: newPassword })
+  ]);
 
   return res.status(200).json({ success: true, message: 'Password successfully changed' });
 };
