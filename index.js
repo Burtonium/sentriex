@@ -21,6 +21,7 @@ app.use(cors({
 app.use(cookieParser());
 app.use(helmet());
 app.use(helmet.hidePoweredBy());
+app.get('/', (req, res) => res.send('Welcome to Sentriex API V1'));
 app.use('/v1', routes);
 
 app.use((err, req, res, next) => {
