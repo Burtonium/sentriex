@@ -1,7 +1,7 @@
 const User = require('../../models/user');
 
 exports.seed = async (knex) => User.query().insert([{
-  id: 0,
+  id: 1,
   email: 'admin@sentriex.com',
   username: 'test_admin',
   type: 'admin',
@@ -9,7 +9,7 @@ exports.seed = async (knex) => User.query().insert([{
   active: true,
   activatedAt: new Date()
 }, {
-  id: 1,
+  id: 2,
   email: 'manager@sentriex.com',
   username: 'test_fund_manager',
   type: 'fund_manager',
@@ -17,7 +17,7 @@ exports.seed = async (knex) => User.query().insert([{
   active: true,
   activatedAt: new Date()
 }, {
-  id: 2,
+  id: 3,
   email: 'user@sentriex.com',
   username: 'test_user',
   type: 'user',
@@ -25,7 +25,7 @@ exports.seed = async (knex) => User.query().insert([{
   active: true,
   activatedAt: new Date(),
 }, {
-  id: 3,
+  id: 4,
   email: 'referral@sentriex.com',
   username: 'test_referral',
   type: 'user',
@@ -33,4 +33,4 @@ exports.seed = async (knex) => User.query().insert([{
   active: true,
   activatedAt: new Date(),
   referredBy: 2,
-}]);
+}]).then(() => knex.raw('select setval(\'users_id_seq\', max(id)) from users'));

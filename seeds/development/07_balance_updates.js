@@ -1,5 +1,5 @@
 exports.seed = async knex => knex('investment_fund_balance_updates').insert([{
-  investmentFundId: 0,
+  investmentFundId: 1,
   previousBalance: 10,
   updatedBalance: 11,
   previousSharePrice: 1,
@@ -7,7 +7,7 @@ exports.seed = async knex => knex('investment_fund_balance_updates').insert([{
   createdAt: knex.fn.now(),
   updatedAt: knex.fn.now(),
 }, {
-  investmentFundId: 0,
+  investmentFundId: 1,
   previousBalance: 11,
   updatedBalance: 12,
   previousSharePrice: 1.1,

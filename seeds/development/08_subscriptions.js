@@ -1,6 +1,6 @@
 exports.seed = async knex => knex('investment_fund_requests').insert([{
-  userId: 2,
-  investmentFundId: 0,
+  userId: 3,
+  investmentFundId: 1,
   type:'subscription',
   status: 'approved',
   amount: 5,
@@ -9,8 +9,8 @@ exports.seed = async knex => knex('investment_fund_requests').insert([{
   createdAt: knex.fn.now(),
   updatedAt: knex.fn.now(),
 }, {
-  userId: 2,
-  investmentFundId: 0,
+  userId: 3,
+  investmentFundId: 1,
   type:'subscription',
   status: 'approved',
   amount: 5,

@@ -233,6 +233,14 @@ class InvestmentFund extends Model {
 
   static get relationMappings() {
     return {
+      manager: {
+        relation: Model.BelongsToOneRelation,
+        modelClass: `${__dirname}/user`,
+        join: {
+          from: 'investment_funds.managedBy',
+          to: 'users.id',
+        },
+      },
       creator: {
         relation: Model.BelongsToOneRelation,
         modelClass: `${__dirname}/user`,

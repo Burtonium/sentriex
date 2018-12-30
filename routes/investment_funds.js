@@ -1,13 +1,10 @@
 const assert = require('assert');
 const { transaction } = require('objection');
-const Mailer = require('./mailer');
 const { knex } = require('../database');
 const InvestmentFund = require('../models/investment_fund');
 const InvestmentFundShares = require('../models/investment_fund_shares');
 const InvestmentFundRequest = require('../models/investment_fund_request');
 const Balance = require('../models/balance');
-const User = require('../models/user');
-const Currency = require('../models/currency');
 const { BadRequest } = require('./errors');
 const validate = require('celebrate').celebrate;
 const { pick } = require('lodash');
@@ -35,40 +32,9 @@ class CannotPatchRequest extends BadRequest {
   }
 }
 
-const sendRequestAuthenticationEmail = async investmentFundRequest => {
-  const {
-    authenticationToken,
-    amount,
-    userId,
-    type,
-    investmentFundId
-  } = investmentFundRequest;
-
-  const investmentFund = investmentFundRequest.investmentFund || await InvestmentFund.query().where('id', investmentFundId).first();
-  const [user, currency] = await Promise.all([
-    investmentFundRequest.user || User.query().where('id', userId).first(),
-    investmentFundRequest.currency || Currency.query().where('code', investmentFund.currencyCode).first(),
-  ]);
-
-  const { name } = investmentFund;
-  const { email } = user;
-  const formattedAmount = currency.format(amount);
-  const url = `${process.env.SITE_URL}/investment-fund-requests/activate/${authenticationToken}`;
-  const msg = {
-    to: email,
-    from: process.env.NOREPLY_EMAIL,
-    subject: 'Request Authentication',
-    text: `Please verify your ${type} of ${formattedAmount} to the fund: "${name}" by clicking
-           the following link:
-           ${url}`,
-  };
-
-  Mailer.send(msg);
-};
-
 const fetchAll = async(req, res) => {
   const investmentFunds = await InvestmentFund.query()
-    .eager('[currency,creator,shares,balanceUpdates]');
+    .eager('[currency,manager,shares,balanceUpdates]');
   return res.status(200).json({ investmentFunds });
 };
 
@@ -94,9 +60,12 @@ const subscribeToFund = async (req, res) => {
     }).first();
   assert(balance, 'Balance not found');
 
-  const twofaEnabledAndVerified = req.user.twofa && req.twofaIsVerified;
-  const { PENDING, PENDING_EMAIL_VERIFICATION } = InvestmentFundRequest.statuses;
-  const status = twofaEnabledAndVerified ? PENDING : PENDING_EMAIL_VERIFICATION;
+  if (req.user.twofa && !req.twofaIsVerified) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' }); 
+  }
+  
+  const { PENDING } = InvestmentFundRequest.statuses;
+  const status =  PENDING;
 
   let request;
   await transaction(knex, async (trx) => {
@@ -110,10 +79,6 @@ const subscribeToFund = async (req, res) => {
       balance.remove(amount, trx),
     ]);
   });
-
-  if (request.status === PENDING_EMAIL_VERIFICATION) {
-    sendRequestAuthenticationEmail(request);
-  }
 
   return res.status(200).json({ success: true, request });
 };
@@ -134,9 +99,11 @@ const redeemFromFund = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Investment fund not found' });
   }
 
-  const twofaEnabledAndVerified = req.user.twofa && req.twofaIsVerified;
-  const { PENDING, PENDING_EMAIL_VERIFICATION } = InvestmentFundRequest.statuses;
-  const status = twofaEnabledAndVerified ? PENDING : PENDING_EMAIL_VERIFICATION;
+  if (req.user.twofa && !req.twofaIsVerified) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' }); 
+  }
+  const { PENDING } = InvestmentFundRequest.statuses;
+  const status =  PENDING;
 
   const request = await investmentFund.$relatedQuery('requests').insert({
     userId,
@@ -145,10 +112,6 @@ const redeemFromFund = async (req, res) => {
     requestPercent: percent,
     status,
   }).returning('*');
-
-  if (request.status === PENDING_EMAIL_VERIFICATION) {
-    sendRequestAuthenticationEmail(request);
-  }
 
   res.status(200).json({ success: true, request });
 };
@@ -202,7 +165,6 @@ const patchInvestmentFundRequest = async (req, res) => {
     .query()
     .joinRelation('requests')
     .where('requests.id', id)
-    .where({ creatorId: req.user.id })
     .eager('[requests.user.balances.currency,shares,currency]')
     .modifyEager('requests', qb => qb.where('id', id))
     .first();
@@ -280,6 +242,10 @@ const updateBalance = async (req, res) => {
   const investmentFund = await InvestmentFund.query()
     .where({ id })
     .eager('shares')
+    .skipUndefined()
+    .where({
+      managedBy: req.user.admin ? undefined : req.user.id,
+    })
     .first();
 
   if (!investmentFund) {
@@ -310,7 +276,8 @@ const updateInvestmentFund = async (req, res) => {
     'currencyCode',
     'shortDescription',
     'detailedDescription',
-    'riskLevel'
+    'riskLevel',
+    'managedBy',
   ]);
 
   const investmentFund = await InvestmentFund.query()
@@ -333,6 +300,7 @@ const createInvestmentFund = async (req, res) => {
     'shortDescription',
     'detailedDescription',
     'riskLevel',
+    'managedBy',
   ]);
 
   const investmentFund = await InvestmentFund.query().insert({
@@ -354,9 +322,16 @@ const fetchBalanceUpdates = async (req, res) => {
     .eager('balanceUpdates')
     .where({
       id,
-      creatorId: req.user.id,
+    })
+    .skipUndefined()
+    .where({
+      managedBy: req.user.admin ? undefined : req.user.id,
     }).first();
-
+  
+  if (!investmentFund) {
+    return res.status(404).json({ success: false, message: 'Not found' });
+  }
+  
   res.status(200).json({
     success: true,
     balanceUpdates: investmentFund.balanceUpdates

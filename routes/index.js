@@ -7,6 +7,7 @@ const investmentFunds = require('./investment_funds');
 const deposit = require('./deposit');
 const withdrawal = require('./withdraw');
 const settings = require('./settings');
+const user = require('./user');
 const routes = require('express').Router();
 
 routes.post('/authenticate', throttle({ rate: '5/s' }), auth.authenticate);
@@ -45,14 +46,16 @@ routes.post('/investment-funds/:id/redeem', auth.verifyToken, auth.verify2fa, in
 routes.post('/investment-fund-requests/activate/:authenticationToken', auth.verifyToken, investmentFunds.activateRequest);
 
 // fund manager routes
-routes.patch('/manager/investment-funds/:id', auth.verifyManager, investmentFunds.updateInvestmentFund);
-routes.post('/manager/investment-funds', auth.verifyManager, investmentFunds.createInvestmentFund);
 routes.get('/manager/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.fetchBalanceUpdates);
 routes.post('/manager/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.updateBalance);
-routes.get('/manager/investment-fund-requests', auth.verifyManager, investmentFunds.fetchAllRequests);
-routes.patch('/manager/investment-fund-requests/:id', auth.verifyManager, investmentFunds.patchInvestmentFundRequest);
 
 // admin routes
+routes.get('/admin/investment-fund-requests', auth.verifyAdmin, investmentFunds.fetchAllRequests);
+routes.patch('/admin/investment-fund-requests/:id', auth.verifyAdmin, investmentFunds.patchInvestmentFundRequest);
+
+routes.patch('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.updateInvestmentFund);
+routes.post('/admin/investment-funds', auth.verifyAdmin, investmentFunds.createInvestmentFund);
+
 routes.post('/admin/currencies', auth.verifyAdmin, currencies.create);
 routes.patch('/admin/currencies/:code', auth.verifyAdmin, currencies.patch);
 routes.post('/admin/currencies/:code/addresses', auth.verifyAdmin, deposit.addAddresses);
@@ -66,5 +69,7 @@ routes.get('/admin/withdrawals', auth.verifyAdmin, withdrawal.fetchWithdrawals);
 
 routes.get('/admin/settings', auth.verifyAdmin, settings.fetchSettings);
 routes.patch('/admin/settings', auth.verifyAdmin, settings.patchSettings);
+
+routes.get('/admin/users', auth.verifyAdmin, user.fetchAll);
 
 module.exports = routes;
