@@ -4,7 +4,7 @@ const daysBetween = (date1, date2) => {
   const date2Millis = date2.getTime();
   const diff = Math.abs(date1Millis - date2Millis);
   return Math.round(diff / day);
-};
+}
 
 const hoursBetween = (date1, date2) => {
   const hour = 1000 * 60 * 60;
@@ -20,8 +20,13 @@ const percentDifference = (a, b) => {
   return (((second - first) / first) * 100).toFixed(2);
 };
 
+const oneDay = 1000 * 60 * 60 * 24;
+
+const daysAgo = days => new Date(new Date() - (days * oneDay));
+
 module.exports = {
   daysBetween,
   hoursBetween,
   percentDifference,
+  daysAgo,
 };
