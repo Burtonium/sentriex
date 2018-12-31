@@ -61,9 +61,9 @@ const subscribeToFund = async (req, res) => {
   assert(balance, 'Balance not found');
 
   if (req.user.twofa && !req.twofaIsVerified) {
-    return res.status(401).json({ success: false, message: 'Unauthorized' }); 
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
-  
+
   const { PENDING } = InvestmentFundRequest.statuses;
   const status =  PENDING;
 
@@ -100,7 +100,7 @@ const redeemFromFund = async (req, res) => {
   }
 
   if (req.user.twofa && !req.twofaIsVerified) {
-    return res.status(401).json({ success: false, message: 'Unauthorized' }); 
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
   }
   const { PENDING } = InvestmentFundRequest.statuses;
   const status =  PENDING;
@@ -143,15 +143,15 @@ const cancelRequest = async (req, res) => {
 
     assert(balance, 'Balance not found');
     const { CANCELED } = InvestmentFundRequest.statuses;
-    
+    const refundUser = request.refundable;
     const result = await request.$query(trx).update({
       status: CANCELED,
-      refunded: request.refundable
+      refunded: refundUser,
     }).returning('*');
-    
-    if (request.refundable){
+
+    if (refundUser){
       await balance.add(result.amount, trx);
-    } 
+    }
   });
 
   return res.status(200).json({ success: true });
@@ -202,13 +202,13 @@ const activateRequest = async (req, res) => {
     authenticationToken,
     status: PENDING_EMAIL_VERIFICATION,
   });
-  
+
   if (!request) {
     return res.status(404).json({ success: false, message: 'Request not found' });
   }
-  
+
   await request.$query().update({ status: PENDING });
-  
+
   return res.status(200).json({ success: true });
 };
 
@@ -327,11 +327,11 @@ const fetchBalanceUpdates = async (req, res) => {
     .where({
       managedBy: req.user.admin ? undefined : req.user.id,
     }).first();
-  
+
   if (!investmentFund) {
     return res.status(404).json({ success: false, message: 'Not found' });
   }
-  
+
   res.status(200).json({
     success: true,
     balanceUpdates: investmentFund.balanceUpdates

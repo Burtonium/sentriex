@@ -7,7 +7,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const { isCelebrate } = require('celebrate');
 const routes = require('./routes');
-const http = require('http').createServer(app);
+const server = require('./server')(app);
 const env = process.env.NODE_ENV || 'development';
 const production = env === 'production';
 const port = process.env.PORT || 8081;
@@ -42,8 +42,9 @@ app.use((err, req, res, next) => {
   next(err);
 });
 
-http.listen(port, () => {
-  console.log(`Listening on ${port} in ${env} mode`); // eslint-disable-line
+const connectionType = process.env.SELF_SIGN_SSL ? 'https' : 'http';
+server.listen(port, () => {
+  console.log(`Listening on ${port} in ${env} mode with ${connectionType}`); // eslint-disable-line
 });
 
-module.exports = http;
+module.exports = server;

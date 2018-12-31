@@ -58,3 +58,7 @@ typings/
 
 # next.js build output
 .next
+
+# self sign https config
+server.key
+server.cert
