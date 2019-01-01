@@ -3,7 +3,7 @@ exports.seed = async (knex) => knex('investment_funds').insert([{
   creatorId: 1,
   managedBy: 2,
   currencyCode: 'BTC',
-  balance: 12,
+  balance: 21.1,
   name: 'Super Investment Fund',
   shortDescription: 'This is a super investment fund guaranteed to triple your money in 1 month',
 }, {

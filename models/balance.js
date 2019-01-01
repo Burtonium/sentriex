@@ -8,12 +8,14 @@ class Balance extends Model {
   }
 
   async add(amount, trx) {
+    assert.ok(parseFloat(amount) >= 0, 'Amount must be a positive number');
     assert.ok(this.currency, 'Balance.add() requires currency precision');
     this.amount = this.currency.toFixed(BigNumber(this.amount).plus(amount));
     return Balance.query(trx).forUpdate().where('id', this.id).update({ amount: this.amount });
   }
 
   async remove(amount, trx) {
+    assert.ok(parseFloat(amount) >= 0, 'Amount must be a positive number');
     assert.ok(this.currency, 'Balance.add() requires currency precision');
     assert.ok(BigNumber(amount).isLessThanOrEqualTo(this.amount), `Trying to remove ${amount} from ${this.amount} of ${this.currencyCode}`);
     this.amount = this.currency.toFixed(BigNumber(this.amount).minus(amount));

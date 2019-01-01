@@ -16,11 +16,11 @@ class InvestmentFund extends Model {
   static get timestamp() {
     return true;
   }
-  
+
   static get virtualAttributes() {
     return ['sharePrice', 'shareCount', 'monthlyPerformance'];
   }
-  
+
   get sharePrice() {
     let price = null;
     if (!this.shares) {
@@ -31,29 +31,29 @@ class InvestmentFund extends Model {
     }
     return new BigNumber(this.balance).dividedBy(this.shareCount).toString();
   }
-  
+
   get shareCount() {
     const s = this.shares;
     return s ? s.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0)) : null;
   }
-  
+
   get monthlyPerformance() {
     const b = this.balanceUpdates;
     if (!b) {
       return null;
     }
-    
+
     const updates = b.filter(u => daysBetween(u.createdAt, new Date()) < 30);
 
     let performance = 0;
-    if (updates.length) { 
+    if (updates.length) {
       const firstPrice = parseFloat(updates[0].previousSharePrice);
       const lastPrice = parseFloat(updates[updates.length - 1].updatedSharePrice);
       performance = percentDifference(firstPrice, lastPrice);
     }
     return performance;
   }
-  
+
   async add(amount, trx) {
     assert.ok(this.currency, 'Balance.add() requires currency precision');
     this.balance = this.currency.toFixed(BigNumber(this.balance).plus(amount));
@@ -66,12 +66,12 @@ class InvestmentFund extends Model {
     this.balance = this.currency.toFixed(BigNumber(this.balance).minus(amount));
     return this.$query(trx).forUpdate().update({ balance: this.balance });
   }
-  
+
   async approveSubscription(investmentFundRequest) {
     assert.ok(this.shares, 'Shares must be eager loaded');
     const { userId } = investmentFundRequest;
     const amount = investmentFundRequest.amount;
-    
+
     let shareBalance = this.shares && this.shares.find(sb => sb.userId === userId);
     if (!shareBalance) {
       shareBalance = await this.$relatedQuery('shares').insert({
@@ -79,11 +79,11 @@ class InvestmentFund extends Model {
         amount: 0
       });
     }
-  
+
     const shareAmount = (new BigNumber(amount)).dividedBy(this.sharePrice);
-  
+
     assert.ok(shareAmount.isGreaterThan(0), 'Invalid amount of shares bought');
-    
+
     const { APPROVED } = InvestmentFundRequest.statuses;
     return transaction(knex, async (trx) => {
       return Promise.all([
@@ -97,14 +97,14 @@ class InvestmentFund extends Model {
       ]);
     });
   }
-  
+
   async declineSubscription(investmentFundRequest) {
     assert.ok(investmentFundRequest &&
       investmentFundRequest.user &&
       investmentFundRequest.user.balances, 'User balances required');
     const balance = investmentFundRequest.user.balances.find(b => b.currencyCode === this.currencyCode);
     assert.ok(balance, 'User balance not found');
-    
+
     const { DECLINED } = InvestmentFundRequest.statuses;
     const amount = investmentFundRequest.amount;
     return transaction(knex, async (trx) => {
@@ -114,7 +114,7 @@ class InvestmentFund extends Model {
       ]);
     });
   }
-  
+
   async approveRedemption(investmentFundRequest) {
     assert.ok(this.shares, 'Shares must be eager loaded');
     let amount = investmentFundRequest.amount;
@@ -122,7 +122,7 @@ class InvestmentFund extends Model {
     let shareAmount = (new BigNumber(amount)).dividedBy(sharePrice);
     const userShareBalance = this.shares.find(s => s.userId === investmentFundRequest.userId);
     assert.ok(userShareBalance, 'User has no shares to redeem');
-    
+
     if (!amount) {
       const percent = investmentFundRequest.requestPercent;
       assert.ok(percent, 'Both requestPercent and amount not found on request.');
@@ -131,16 +131,16 @@ class InvestmentFund extends Model {
     } else {
       amount = new BigNumber(amount);
     }
-    
+
     assert.ok(investmentFundRequest &&
       investmentFundRequest.user &&
       investmentFundRequest.user.balances, 'User balances required');
     const balance = investmentFundRequest.user.balances.find(b => b.currencyCode === this.currencyCode);
     assert.ok(balance, 'User balance not found');
-    
+
     const { APPROVED } = InvestmentFundRequest.statuses;
     const { SUBSCRIPTION } = InvestmentFundRequest.types;
-    
+
     // calculate profit
     const userId = investmentFundRequest.user.id;
     const userSubscriptions = await InvestmentFundRequest.query().where({
@@ -149,7 +149,7 @@ class InvestmentFund extends Model {
       refunded: false,
       userId,
     }).orderBy('createdAt', 'desc');
-    
+
     let remaining = new BigNumber(userShareBalance.amount);
     let sharesProfit = new BigNumber(0);
     userSubscriptions.every(s => {
@@ -160,15 +160,17 @@ class InvestmentFund extends Model {
       remaining = remaining.minus(s.shares);
       return remaining.isGreaterThan(0);
     });
-    
+
     const totalProfitPercent = sharesProfit.dividedBy(userShareBalance.amount);
-    const redeemProfitAmount = totalProfitPercent.times(amount);
-    
-    const settings = await knex('investment_fund_settings').select().first();
-    
+    let redeemProfitAmount = totalProfitPercent.times(amount);
+    if (redeemProfitAmount.isLessThan(0)) {
+      redeemProfitAmount = new BigNumber(0);
+    }
+
     return transaction(knex, async (trx) => {
+      const settings = await knex('investment_fund_settings').select().first();
       let sitesCutPercent = settings.siteRedeemProfitPercent;
-      
+
       // Calculate and pay out referral cut
       const { referredBy } = investmentFundRequest.user;
       let referralCut = 0;
@@ -179,7 +181,7 @@ class InvestmentFund extends Model {
           .where('id', referredBy)
           .eager('balances.currency')
           .first();
-          
+
         if (referringUser) {
           referralCut = redeemProfitAmount.times(referralCutPercent).toString();
           await knex('referral_payments').transacting(trx).insert({
@@ -190,28 +192,27 @@ class InvestmentFund extends Model {
             createdAt: new Date(),
             updatedAt: new Date(),
           });
-          
+
           const balance = referringUser.balances.find(b => b.currencyCode === this.currencyCode);
           await balance.add(referralCut, trx);
         }
-      } 
+      }
       const sitesCut = redeemProfitAmount.times(sitesCutPercent).toString();
       const managersCut = redeemProfitAmount.times(settings.fundManagerRedeemProfitPercent).toString();
       const amountMinusFees = amount.minus(managersCut).minus(sitesCut).minus(referralCut).toString();
-      
+
       await investmentFundRequest.$query(trx)
         .context({
           createFees: true,
           feeAmountOverride: sitesCut.toString(),
         })
         .update({ amount: amountMinusFees, status: APPROVED });
-      
-      
+
       const managersBalance = await Balance.query().eager('currency').where({
           userId: this.creatorId,
           currencyCode: this.currencyCode,
         }).first();
-        
+
       return Promise.all([
         this.$relatedQuery('profitShares', trx).insert({
           amount: managersCut,
@@ -225,7 +226,7 @@ class InvestmentFund extends Model {
       ]);
     });
   }
-  
+
   declineRedemption(investmentFundRequest) {
     const { DECLINED } = InvestmentFundRequest.statuses;
     return investmentFundRequest.$query().update({ status: DECLINED });
