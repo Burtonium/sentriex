@@ -135,7 +135,8 @@ const cancel = async (req, res) => {
   let withdrawal;
   await transaction(knex, async (trx) => {
     withdrawal = await Withdrawal.query(trx)
-      .where({ userId, id })
+      .joinEager('fees')
+      .where({ userId, withdrawalId: id })
       .first()
       .forUpdate();
 
@@ -154,11 +155,15 @@ const cancel = async (req, res) => {
       .first();
 
     assert(balance, 'Balance not found');
-    const result = await withdrawal.$query(trx)
-      .context({ refundFees: true })
-      .update({ status: Withdrawal.statuses.CANCELED, refunded: true })
-      .returning('*');
-    await balance.add(result.amount, trx);
+
+    const amountWithFees = BigNumber(withdrawal.amount).plus(withdrawal.feeAmount).toString();
+    const result = await Promise.all([
+      withdrawal.$query(trx)
+        .update({ amount: amountWithFees, status: Withdrawal.statuses.CANCELED, refunded: true })
+        .returning('*'),
+      withdrawal.$relatedQuery('fees', trx).del(),
+    ]);
+    await balance.add(amountWithFees, trx);
   });
 
   return res.status(200).json({ success: true, message: 'Canceled transfer request' });
@@ -168,7 +173,7 @@ const patch = async (req, res) => {
   const { id } = req.params;
   const { status, txId } = req.body;
 
-  const withdrawal = await Withdrawal.query().where({ id }).first();
+  const withdrawal = await Withdrawal.query().joinEager('fees').where({ withdrawalId: id }).first();
   if (!withdrawal) {
     return res.status(404).json({ success: false, message: 'Withdrawal not found' });
   }
@@ -187,15 +192,19 @@ const patch = async (req, res) => {
       assert(balance, 'Balance required for refund');
     }
 
+    const amountWithFees = BigNumber(withdrawal.amount).plus(withdrawal.feeAmount).toString();
+
     await Promise.all([
       withdrawal.$query(trx)
-        .context({ refundFees: refundUser })
-        .skipUndefined().update({
+        .skipUndefined()
+        .update({
+          amount: refundUser ? amountWithFees : undefined,
           status,
           txId,
           refunded: refundUser || undefined,
         }),
-      refundUser && balance.add(withdrawal.amount, trx),
+      withdrawal.$relatedQuery('fees', trx).del(),
+      refundUser && balance.add(amountWithFees, trx),
     ]);
   });
 
