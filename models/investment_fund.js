@@ -164,7 +164,9 @@ class InvestmentFund extends Model {
     assert.ok(balance, 'User balance not found');
 
     const profitPercent = await this.calculateUserProfitPercent(investmentFundRequest.user.id);
-    let redeemProfitAmount = profitPercent.isGreaterThan(0) ? amount.times(profitPercent) : new BigNumber(0);
+    let totalShareProfitAmount = profitPercent.isGreaterThan(0) ? amount.times(profitPercent) : new BigNumber(0);
+    const sharesCurrentValue = new BigNumber(userShareBalance.amount).times(this.sharePrice);
+    const redeemProfitAmount = amount.dividedBy(sharesCurrentValue).times(totalShareProfitAmount);
 
     return transaction(knex, async (trx) => {
       const settings = await knex('investment_fund_settings').select().first();
@@ -212,7 +214,7 @@ class InvestmentFund extends Model {
           userId: this.creatorId,
           currencyCode: this.currencyCode,
         }).first();
-
+      throw new Error();
       return Promise.all([
         investmentFundRequest.$query(trx)
           .update({ amount: amountMinusFees, status: InvestmentFundRequest.statuses.APPROVED }),
