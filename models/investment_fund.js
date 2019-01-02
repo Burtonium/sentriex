@@ -214,7 +214,7 @@ class InvestmentFund extends Model {
           userId: this.creatorId,
           currencyCode: this.currencyCode,
         }).first();
-      throw new Error();
+        
       return Promise.all([
         investmentFundRequest.$query(trx)
           .update({ amount: amountMinusFees, status: InvestmentFundRequest.statuses.APPROVED }),
