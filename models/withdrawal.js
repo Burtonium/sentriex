@@ -1,27 +1,19 @@
 const { Model, knex } = require('../database/index');
 const BigNumber = require('bignumber.js');
-const Feeable = require('./feeable')({
-  feeableField: 'amount',
-  feeRate: async () => { 
-    const { withdrawalFeeRate } = await knex('investmentFundSettings').select('withdrawalFeeRate').first();
-    console.log(withdrawalFeeRate);
-    return parseFloat(withdrawalFeeRate);
-  },
-});
 
-class Withdrawal extends Feeable(Model) {
+class Withdrawal extends Model {
   static get tableName() {
     return 'withdrawals';
   }
-  
+
   static get virtualAttributes() {
     return ['feeAmount'];
   }
-  
+
   static get timestamp() {
     return true;
   }
-  
+
   static get statuses() {
     return {
       PENDING: 'pending',
@@ -31,11 +23,11 @@ class Withdrawal extends Feeable(Model) {
       CANCELED: 'canceled',
     };
   }
-  
+
   static get cancelableStatuses() {
     return [this.statuses.PENDING, this.statuses.PENDING_EMAIL_VERIFICATION];
   }
-  
+
   get feeAmount() {
     if (!this.fees) {
       return null;

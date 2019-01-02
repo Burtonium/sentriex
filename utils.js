@@ -1,3 +1,4 @@
+const BigNumber = require('bignumber.js');
 const daysBetween = (date1, date2) => {
   const day = 1000 * 60 * 60 * 24;
   const date1Millis = date1.getTime();
@@ -15,9 +16,9 @@ const hoursBetween = (date1, date2) => {
 };
 
 const percentDifference = (a, b) => {
-  const first = parseFloat(a);
-  const second = parseFloat(b);
-  return (((second - first) / first) * 100).toFixed(2);
+  const first = new BigNumber(a);
+  const second = new BigNumber(b);
+  return second.minus(first).dividedBy(first);
 };
 
 const oneDay = 1000 * 60 * 60 * 24;

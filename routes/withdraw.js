@@ -1,9 +1,11 @@
 const { transaction } = require('objection');
 const validate = require('celebrate').celebrate;
+const BigNumber = require('bignumber.js');
 const Mailer = require('./mailer');
 const Withdrawal = require('../models/withdrawal');
 const Balance = require('../models/balance');
 const User = require('../models/user');
+const Fees = require('../models/fees');
 const Currency = require('../models/currency');
 const { knex } = require('../database');
 const withdrawalSchema = require('./validation/withdraw.schema');
@@ -54,7 +56,7 @@ const sendWithdrawalAuthenticationEmail = async withdrawal => {
 const fetchMyWithdrawals = async (req, res) => {
   const { currencyCode } = req.query;
   const withdrawals = await Withdrawal.query()
-    .joinEager('[fees]') 
+    .joinEager('[fees]')
     .where('userId', req.user.id)
     .skipUndefined()
     .andWhere('currencyCode', currencyCode);
@@ -70,7 +72,7 @@ const fetchWithdrawals = async (req, res) => {
     .where({ currencyCode })
     .orderBy('createdAt', 'desc')
     .limit(20);
-    
+
   return res.status(200).json({ success: true, withdrawals });
 };
 
@@ -86,25 +88,29 @@ const create = async (req, res) => {
       userId: req.user.id,
     }).first();
   assert(balance, 'Balance required');
-  
+  const { withdrawalFeeRate } = await knex('investmentFundSettings').select('withdrawalFeeRate').first();
+  const amountWithFees = new BigNumber(amount);
+  const feeAmount = amountWithFees.times(withdrawalFeeRate);
+  const amountMinusFees = amountWithFees.minus(feeAmount);
   let withdrawal;
   await transaction(knex, async (trx) => {
     [withdrawal] = await Promise.all([
-      Withdrawal.query(trx).context({ createFees: true }).insert({
+      Withdrawal.query(trx).insert({
         currencyCode,
         userId: req.user.id,
         status,
-        amount,
+        amount: amountMinusFees.toString(),
         address,
       }).returning('*'),
       balance.remove(amount, trx),
     ]);
+    await withdrawal.$relatedQuery('fees', trx).insert({ amount: feeAmount.toString() });
   });
 
   if (status === PENDING_EMAIL_VERIFICATION) {
     sendWithdrawalAuthenticationEmail(withdrawal);
   }
-  
+
   return res.status(200).json({ success: true, withdrawal });
 };
 
@@ -161,7 +167,7 @@ const cancel = async (req, res) => {
 const patch = async (req, res) => {
   const { id } = req.params;
   const { status, txId } = req.body;
-  
+
   const withdrawal = await Withdrawal.query().where({ id }).first();
   if (!withdrawal) {
     return res.status(404).json({ success: false, message: 'Withdrawal not found' });
@@ -170,21 +176,21 @@ const patch = async (req, res) => {
   await transaction(knex, async (trx) => {
     const { CANCELED, DECLINED } = Withdrawal.statuses;
     const refundUser = !withdrawal.refunded && (status === CANCELED || status === DECLINED);
-  
+
     const { currencyCode } = withdrawal;
     const balance = refundUser && await Balance.query(trx)
       .eager('currency')
       .where({ userId: withdrawal.userId, currencyCode })
       .first();
-      
+
     if (refundUser) {
       assert(balance, 'Balance required for refund');
     }
-    
+
     await Promise.all([
       withdrawal.$query(trx)
         .context({ refundFees: refundUser })
-        .skipUndefined().update({ 
+        .skipUndefined().update({
           status,
           txId,
           refunded: refundUser || undefined,
@@ -193,7 +199,7 @@ const patch = async (req, res) => {
     ]);
   });
 
-  
+
   return res.status(200).json({ success: true });
 };
 

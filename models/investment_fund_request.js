@@ -1,12 +1,7 @@
 const { Model } = require('../database/index');
 const BigNumber = require('bignumber.js');
 
-const Feeable = require('./feeable')({
-  feeableField: 'amount',
-  feeRatePercent: 1,
-});
-
-class InvestmentFundRequest extends Feeable(Model) {
+class InvestmentFundRequest extends Model {
   static get tableName() {
     return 'investment_fund_requests';
   }
@@ -52,7 +47,7 @@ class InvestmentFundRequest extends Feeable(Model) {
   get refundable() {
     return !this.refunded && this.type === InvestmentFundRequest.types.SUBSCRIPTION;
   }
-  
+
   get feeAmount() {
     if (!this.fees || !this.profitShares) {
       return null;
@@ -61,7 +56,7 @@ class InvestmentFundRequest extends Feeable(Model) {
     const profitSharesTaken = this.profitShares.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0));
     return feeAmount.plus(profitSharesTaken).toString();
   }
-  
+
   get siteFees() {
     if (!this.fees) {
       return null;
@@ -69,7 +64,7 @@ class InvestmentFundRequest extends Feeable(Model) {
     const feeAmount = this.fees.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0));
     return feeAmount.toString();
   }
-  
+
   get profitShare() {
     if (!this.profitShares) {
       return null;
