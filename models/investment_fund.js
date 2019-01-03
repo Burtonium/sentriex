@@ -115,7 +115,7 @@ class InvestmentFund extends Model {
     });
   }
 
-  async calculateUserProfitPercent(userId) {
+  async calculateUserProfitAmount(userId) {
     const userShareBalance = this.shares.find(s => s.userId === userId);
     assert.ok(userShareBalance, 'User has no shares to redeem');
 
@@ -137,13 +137,13 @@ class InvestmentFund extends Model {
     });
 
     const sharesCurrentValue = new BigNumber(userShareBalance.amount).times(this.sharePrice);
-    return percentDifference(sharesInitialValue, sharesCurrentValue);
+    return percentDifference(sharesInitialValue, sharesCurrentValue).times(sharesInitialValue);
   }
 
   async approveRedemption(investmentFundRequest) {
     assert.ok(this.shares, 'Shares must be eager loaded');
     let amount = investmentFundRequest.amount;
-    const sharePrice = this.sharePrice;
+    const sharePrice = new BigNumber(this.sharePrice);
     let shareAmount = (new BigNumber(amount)).dividedBy(sharePrice);
     const userShareBalance = this.shares.find(s => s.userId === investmentFundRequest.userId);
     assert.ok(userShareBalance, 'User has no shares to redeem');
@@ -163,10 +163,8 @@ class InvestmentFund extends Model {
     const balance = investmentFundRequest.user.balances.find(b => b.currencyCode === this.currencyCode);
     assert.ok(balance, 'User balance not found');
 
-    const profitPercent = await this.calculateUserProfitPercent(investmentFundRequest.user.id);
-    let totalShareProfitAmount = profitPercent.isGreaterThan(0) ? amount.times(profitPercent) : new BigNumber(0);
-    const sharesCurrentValue = new BigNumber(userShareBalance.amount).times(this.sharePrice);
-    const redeemProfitAmount = amount.dividedBy(sharesCurrentValue).times(totalShareProfitAmount);
+    const totalProfitAmount = await this.calculateUserProfitAmount(investmentFundRequest.user.id);
+    const redeemProfitAmount = totalProfitAmount.times(amount).dividedBy(sharePrice.times(userShareBalance.amount));
 
     return transaction(knex, async (trx) => {
       const settings = await knex('investment_fund_settings').select().first();
@@ -214,7 +212,7 @@ class InvestmentFund extends Model {
           userId: this.creatorId,
           currencyCode: this.currencyCode,
         }).first();
-        
+
       return Promise.all([
         investmentFundRequest.$query(trx)
           .update({ amount: amountMinusFees, status: InvestmentFundRequest.statuses.APPROVED }),
