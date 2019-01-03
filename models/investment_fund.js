@@ -164,7 +164,9 @@ class InvestmentFund extends Model {
     assert.ok(balance, 'User balance not found');
 
     const totalProfitAmount = await this.calculateUserProfitAmount(investmentFundRequest.user.id);
-    const redeemProfitAmount = totalProfitAmount.times(amount).dividedBy(sharePrice.times(userShareBalance.amount));
+    let redeemProfitAmount = totalProfitAmount.isGreaterThan(0) ?
+      totalProfitAmount.times(amount).dividedBy(sharePrice.times(userShareBalance.amount)) :
+      new BigNumber(0);
 
     return transaction(knex, async (trx) => {
       const settings = await knex('investment_fund_settings').select().first();
