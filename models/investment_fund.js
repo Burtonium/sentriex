@@ -115,16 +115,24 @@ class InvestmentFund extends Model {
     });
   }
 
-  async calculateUserProfitAmount(userId) {
+  async calculateTotalProfitAmount(userId) {
     const userShareBalance = this.shares.find(s => s.userId === userId);
     assert.ok(userShareBalance, 'User has no shares to redeem');
 
-    const userSubscriptions = await this.$relatedQuery('requests').where({
+    let userSubscriptions;
+    const queryCriteria = {
       type: InvestmentFundRequest.types.SUBSCRIPTION,
       status: InvestmentFundRequest.statuses.APPROVED,
       refunded: false,
       userId,
-    }).orderBy('createdAt', 'desc');
+    };
+
+    const check = (...keys) => (obj) => keys.every(k => queryCriteria[k] === obj[k]);
+    if (this.requests) {
+      userSubscriptions = this.requests.filter(check('type', 'status', 'refunded', 'userId'));
+    } else {
+      userSubscriptions = await this.$relatedQuery('requests').where(queryCriteria);
+    }
 
     let remainingShares = new BigNumber(userShareBalance.amount);
     let sharesInitialValue = new BigNumber(0);
@@ -163,7 +171,7 @@ class InvestmentFund extends Model {
     const balance = investmentFundRequest.user.balances.find(b => b.currencyCode === this.currencyCode);
     assert.ok(balance, 'User balance not found');
 
-    const totalProfitAmount = await this.calculateUserProfitAmount(investmentFundRequest.user.id);
+    const totalProfitAmount = await this.calculateTotalProfitAmount(investmentFundRequest.user.id);
     let redeemProfitAmount = totalProfitAmount.isGreaterThan(0) ?
       totalProfitAmount.times(amount).dividedBy(sharePrice.times(userShareBalance.amount)) :
       new BigNumber(0);

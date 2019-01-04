@@ -1,4 +1,5 @@
 const BigNumber = require('bignumber.js');
+
 const daysBetween = (date1, date2) => {
   const day = 1000 * 60 * 60 * 24;
   const date1Millis = date1.getTime();
@@ -25,9 +26,19 @@ const oneDay = 1000 * 60 * 60 * 24;
 
 const daysAgo = days => new Date(new Date() - (days * oneDay));
 
+const daysFromNow = (date) => daysBetween(new Date(date), new Date());
+
+const addDays = (date, days) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
 module.exports = {
   daysBetween,
   hoursBetween,
   percentDifference,
   daysAgo,
+  daysFromNow,
+  addDays,
 };

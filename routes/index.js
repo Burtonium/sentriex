@@ -37,7 +37,7 @@ routes.post('/withdrawals/:id/cancel', auth.verifyToken, withdrawal.cancel);
 routes.post('/withdrawals/:id/activate/:authenticationToken', auth.verifyToken, withdrawal.verifyEmail);
 
 routes.get('/investment-funds', investmentFunds.fetchAll);
-
+routes.get('/investment-funds/performance', auth.verifyToken, investmentFunds.fetchPerformance);
 routes.get('/investment-fund-shares', auth.verifyToken, investmentFunds.fetchShares);
 routes.get('/investment-fund-requests', auth.verifyToken, investmentFunds.fetchRequests);
 routes.post('/investment-fund-requests/:id/cancel', auth.verifyToken, investmentFunds.cancelRequest);

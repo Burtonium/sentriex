@@ -1,5 +1,6 @@
 const assert = require('assert');
 const { transaction } = require('objection');
+const BigNumber = require('bignumber.js');
 const { knex } = require('../database');
 const InvestmentFund = require('../models/investment_fund');
 const InvestmentFundShares = require('../models/investment_fund_shares');
@@ -35,7 +36,8 @@ class CannotPatchRequest extends BadRequest {
 const fetchAll = async(req, res) => {
   const investmentFunds = await InvestmentFund.query()
     .eager('[currency,manager,shares,balanceUpdates]');
-  return res.status(200).json({ investmentFunds });
+  const investmentFundSettings = await knex('investmentFundSettings').select().first();
+  return res.status(200).json({ investmentFunds, investmentFundSettings });
 };
 
 const subscribeToFund = async (req, res) => {
@@ -338,6 +340,62 @@ const fetchBalanceUpdates = async (req, res) => {
   });
 };
 
+const fetchPerformance = async (req, res) => {
+  const userId = req.user.id;
+  const funds = await InvestmentFund.query()
+    .joinEager('shares')
+    .where({
+      userId,
+    })
+    .andWhere('shares.amount', '>', 0)
+    .orderBy('updatedAt', 'asc');
+
+  const { userRedeemProfitPercent } = await knex('investmentFundSettings').select().first();
+  const performance = await Promise.all(funds.map(async (f) => {
+    const profitAmount = await f.calculateTotalProfitAmount(userId);
+    const userProfitAmount = profitAmount.times(userRedeemProfitPercent);
+    const fees = profitAmount.times(1 - userRedeemProfitPercent);
+    const investmentValueMinusFees = new BigNumber(f.shares[0].amount).times(f.sharePrice).minus(fees);
+    const initialInvestment = investmentValueMinusFees.minus(userProfitAmount);
+    const profitPercent = userProfitAmount.dividedBy(initialInvestment)
+      .times(100)
+      .toFixed(2);
+     return {
+        investmentFundId: f.id,
+        investmentFundName: f.name,
+        currencyCode: f.currencyCode,
+        shares: f.shares[0].amount,
+        profitAmount: userProfitAmount,
+        initialInvestment,
+        investmentValue: investmentValueMinusFees,
+        profitPercent,
+    };
+  }));
+
+  performance.sort((a, b) => parseFloat(b.profitAmount) - parseFloat(a.profitAmount));
+
+  return res.status(200).json({ success: true, performance });
+}
+const plot = balanceUpdates => {
+  const toPlot = balanceUpdates
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map(bu => ([new Date(bu.createdAt), (parseFloat(bu.updatedSharePrice) - 1) * 100 ]))
+
+  const plotted = [];
+  toPlot.forEach((update, index) => {
+    plotted.push(update);
+    const DAY = 1000 * 60 * 60 * 24;
+    const dateToPlotTo = toPlot[index + 1] && toPlot[index + 1][0] || new Date();
+    const valueToPlotTo = toPlot[index+ 1] && toPlot[index + 1][1] || update[1];
+    const daysToPlot = daysBetween(update[0], dateToPlotTo);
+    for (let i = 1; i < daysToPlot; i++) {
+      const x = valueToPlotTo + (valueToPlotTo * i / daysToPlot);
+      plotted.push([addDays(update[0], i), x]);
+    }
+  });
+  return plotted.filter(p => daysFromNow(p[0]) < 30);
+}
+
 module.exports = {
   fetchAll,
   subscribeToFund: [validate(subscriptionSchema), subscribeToFund],
@@ -352,4 +410,5 @@ module.exports = {
   fetchBalanceUpdates,
   cancelRequest,
   activateRequest: [authenticateResource, activateRequest],
+  fetchPerformance,
 };
