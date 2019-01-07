@@ -15,6 +15,7 @@ exports.seed = async (knex) => User.query().insert([{
   type: 'fund_manager',
   password: 'testmanager',
   active: true,
+  referredBy: 1,
   activatedAt: new Date()
 }, {
   id: 3,
@@ -23,6 +24,7 @@ exports.seed = async (knex) => User.query().insert([{
   type: 'user',
   password: 'testuser',
   active: true,
+  referredBy:1,
   activatedAt: new Date(),
 }, {
   id: 4,
@@ -32,5 +34,5 @@ exports.seed = async (knex) => User.query().insert([{
   password: 'testreferral',
   active: true,
   activatedAt: new Date(),
-  referredBy: 2,
+  referredBy: 1,
 }]).then(() => knex.raw('select setval(\'users_id_seq\', max(id)) from users'));

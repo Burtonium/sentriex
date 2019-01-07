@@ -8,6 +8,7 @@ const deposit = require('./deposit');
 const withdrawal = require('./withdraw');
 const settings = require('./settings');
 const user = require('./user');
+const referrals = require('./referrals');
 const routes = require('express').Router();
 
 routes.post('/authenticate', throttle({ rate: '5/s' }), auth.authenticate);
@@ -45,6 +46,9 @@ routes.post('/investment-funds/:id/subscribe', auth.verifyToken, auth.verify2fa,
 routes.post('/investment-funds/:id/redeem', auth.verifyToken, auth.verify2fa, investmentFunds.redeemFromFund);
 routes.post('/investment-fund-requests/activate/:authenticationToken', auth.verifyToken, investmentFunds.activateRequest);
 
+
+routes.get('/referral-payments', auth.verifyToken, referrals.fetchPayments);
+
 // fund manager routes
 routes.get('/manager/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.fetchBalanceUpdates);
 routes.post('/manager/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.updateBalance);
@@ -71,5 +75,6 @@ routes.get('/admin/settings', auth.verifyAdmin, settings.fetchSettings);
 routes.patch('/admin/settings', auth.verifyAdmin, settings.patchSettings);
 
 routes.get('/admin/users', auth.verifyAdmin, user.fetchAll);
+
 
 module.exports = routes;

@@ -117,25 +117,20 @@ class InvestmentFund extends Model {
 
   async calculateTotalProfitAmount(userId) {
     const userShareBalance = this.shares.find(s => s.userId === userId);
-    assert.ok(userShareBalance, 'User has no shares to redeem');
 
-    let userSubscriptions;
-    const queryCriteria = {
+    const userSubscriptions = await this.$relatedQuery('requests').where({
       type: InvestmentFundRequest.types.SUBSCRIPTION,
       status: InvestmentFundRequest.statuses.APPROVED,
       refunded: false,
       userId,
-    };
-
-    const check = (...keys) => (obj) => keys.every(k => queryCriteria[k] === obj[k]);
-    if (this.requests) {
-      userSubscriptions = this.requests.filter(check('type', 'status', 'refunded', 'userId'));
-    } else {
-      userSubscriptions = await this.$relatedQuery('requests').where(queryCriteria);
-    }
+    });
 
     let remainingShares = new BigNumber(userShareBalance.amount);
     let sharesInitialValue = new BigNumber(0);
+
+    assert.ok(userSubscriptions.length > 0, 'User must have subbed to redeem');
+    assert.ok(userShareBalance, 'User has no shares to redeem');
+
     userSubscriptions.every(s => {
       assert(s.shares, 'Subscriptions need to have shares recorded');
       const sharesToRedeem = remainingShares.isGreaterThan(s.shares) ? new BigNumber(s.shares) : remainingShares;
@@ -172,6 +167,8 @@ class InvestmentFund extends Model {
     assert.ok(balance, 'User balance not found');
 
     const totalProfitAmount = await this.calculateTotalProfitAmount(investmentFundRequest.user.id);
+    assert.ok(!totalProfitAmount.isNaN(), 'Total profit calculated invalid');
+
     let redeemProfitAmount = totalProfitAmount.isGreaterThan(0) ?
       totalProfitAmount.times(amount).dividedBy(sharePrice.times(userShareBalance.amount)) :
       new BigNumber(0);
@@ -194,9 +191,10 @@ class InvestmentFund extends Model {
           referralCut = redeemProfitAmount.times(referralCutPercent).toString();
           await knex('referral_payments').transacting(trx).insert({
             payeeId: referringUser.id,
-            referralId: userId,
+            referralId: investmentFundRequest.userId,
             redemptionId: investmentFundRequest.id,
             amount: referralCut,
+            currencyCode: this.currencyCode,
             createdAt: new Date(),
             updatedAt: new Date(),
           });
