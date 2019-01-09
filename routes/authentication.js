@@ -14,7 +14,7 @@ const cookieKeys = {
 };
 
 const TOKEN_EXPIRY = process.env.TOKEN_EXPIRY || 60 * 60;
-  
+
 const CSRFOptions = {
   expire: (new Date() + TOKEN_EXPIRY * 1000),
   httpOnly: true,
@@ -38,7 +38,7 @@ const validateRecaptcha = async (req, res, next) => {
   const response = req.body.recaptcha;
   const secret = process.env.RECAPTCHA_SECRET_KEY;
   const remoteip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  
+
   const options = {
     method: 'POST',
     uri: 'https://www.google.com/recaptcha/api/siteverify',
@@ -49,7 +49,7 @@ const validateRecaptcha = async (req, res, next) => {
     },
     json: true,
   };
-  
+
   const recaptchaResponse = await request(options);
 
   if (!recaptchaResponse.success) {
@@ -140,7 +140,7 @@ const authenticate = async (req, res) => {
       throw new InvalidTwofaToken();
     }
   }
-  
+
   const CSRFToken = uuid();
   const encoded = generateToken(user);
 
@@ -151,6 +151,7 @@ const authenticate = async (req, res) => {
       success: true,
       message: 'Authentication successful',
       user: user.toTokenDetails(),
+      tokenExpiry: new Date().getTime() + (TOKEN_EXPIRY * 1000),
       CSRFToken
     });
 };
@@ -188,7 +189,7 @@ const enable2fa = async (req, res) => {
 
   await user.$query().update({ twofaSecret });
 
-  
+
   res.status(200)
     .cookie(cookieKeys.auth, generateToken(user), CSRFOptions) // refresh JWT state
     .json({ success: true, message: 'Two factor authentication enabled' });
@@ -210,7 +211,7 @@ const disable2fa = async (req, res) => {
   }
 
   await user.$query().update({ twofaSecret: null });
-  
+
   const encoded = generateToken(user);
 
   res.status(200)

@@ -1,14 +1,16 @@
 const assert = require('assert');
 const { transaction } = require('objection');
 const BigNumber = require('bignumber.js');
+const validate = require('celebrate').celebrate;
+const { pick } = require('lodash');
+const { daysBetween, addDays } = require('../utils');
 const { knex } = require('../database');
 const InvestmentFund = require('../models/investment_fund');
+const InvestmentFundBalanceUpdates = require('../models/investment_fund_balance_update');
 const InvestmentFundShares = require('../models/investment_fund_shares');
 const InvestmentFundRequest = require('../models/investment_fund_request');
 const Balance = require('../models/balance');
 const { BadRequest } = require('./errors');
-const validate = require('celebrate').celebrate;
-const { pick } = require('lodash');
 const subscriptionSchema = require('./validation/subscription.schema');
 const patchInvestmentFundRequestSchema = require('./validation/admin_update_withdrawal.schema');
 const authenticateResource = validate(require('./validation/authenticate_resource.schema'));
@@ -376,28 +378,44 @@ const fetchPerformance = async (req, res) => {
 
   return res.status(200).json({ success: true, performance });
 }
-const plot = balanceUpdates => {
-  const toPlot = balanceUpdates
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .map(bu => ([new Date(bu.createdAt), (parseFloat(bu.updatedSharePrice) - 1) * 100 ]))
 
-  const plotted = [];
+const fetchTrendData = async (req, res) => {
+  const investmentFundId = req.params.id;
+  const balanceUpdates = await InvestmentFundBalanceUpdates.query()
+    .where({ investmentFundId })
+    .orderBy('createdAt', 'asc');
+
+  const { userRedeemProfitPercent } = await knex('investmentFundSettings').first();
+  const toPlot = balanceUpdates
+    .map(bu => {
+      return [
+        new Date(bu.createdAt),
+        ((parseFloat(bu.updatedSharePrice) - 1) * 100) * userRedeemProfitPercent,
+      ];
+    });
+
+  const investmentFundTrendData = [];
   toPlot.forEach((update, index) => {
-    plotted.push(update);
+    investmentFundTrendData.push(update);
     const DAY = 1000 * 60 * 60 * 24;
     const dateToPlotTo = toPlot[index + 1] && toPlot[index + 1][0] || new Date();
-    const valueToPlotTo = toPlot[index+ 1] && toPlot[index + 1][1] || update[1];
+    const valueToPlotTo = toPlot[index + 1] && toPlot[index + 1][1] || update[1];
     const daysToPlot = daysBetween(update[0], dateToPlotTo);
     for (let i = 1; i < daysToPlot; i++) {
       const x = valueToPlotTo + (valueToPlotTo * i / daysToPlot);
-      plotted.push([addDays(update[0], i), x]);
+      investmentFundTrendData.push([addDays(update[0], i), x]);
     }
   });
-  return plotted.filter(p => daysFromNow(p[0]) < 30);
-}
+
+  return res.status(200).json({
+    success: true,
+    investmentFundTrendData,
+  })
+};
 
 module.exports = {
   fetchAll,
+  fetchTrendData,
   subscribeToFund: [validate(subscriptionSchema), subscribeToFund],
   redeemFromFund,
   fetchShares,

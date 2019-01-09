@@ -42,6 +42,7 @@ routes.get('/investment-funds/performance', auth.verifyToken, investmentFunds.fe
 routes.get('/investment-fund-shares', auth.verifyToken, investmentFunds.fetchShares);
 routes.get('/investment-fund-requests', auth.verifyToken, investmentFunds.fetchRequests);
 routes.post('/investment-fund-requests/:id/cancel', auth.verifyToken, investmentFunds.cancelRequest);
+routes.get('/investment-funds/:id/trend-data', investmentFunds.fetchTrendData);
 routes.post('/investment-funds/:id/subscribe', auth.verifyToken, auth.verify2fa, investmentFunds.subscribeToFund);
 routes.post('/investment-funds/:id/redeem', auth.verifyToken, auth.verify2fa, investmentFunds.redeemFromFund);
 routes.post('/investment-fund-requests/activate/:authenticationToken', auth.verifyToken, investmentFunds.activateRequest);
