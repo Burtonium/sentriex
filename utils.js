@@ -34,6 +34,8 @@ const addDays = (date, days) => {
   return result;
 }
 
+const formatDate = d => `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+
 module.exports = {
   daysBetween,
   hoursBetween,
@@ -41,4 +43,5 @@ module.exports = {
   daysAgo,
   daysFromNow,
   addDays,
+  formatDate,
 };

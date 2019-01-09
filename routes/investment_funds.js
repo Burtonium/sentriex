@@ -3,7 +3,7 @@ const { transaction } = require('objection');
 const BigNumber = require('bignumber.js');
 const validate = require('celebrate').celebrate;
 const { pick } = require('lodash');
-const { daysBetween, addDays } = require('../utils');
+const { daysBetween, addDays, formatDate } = require('../utils');
 const { knex } = require('../database');
 const InvestmentFund = require('../models/investment_fund');
 const InvestmentFundBalanceUpdates = require('../models/investment_fund_balance_update');
@@ -35,7 +35,7 @@ class CannotPatchRequest extends BadRequest {
   }
 }
 
-const fetchAll = async(req, res) => {
+const fetchAll = async (req, res) => {
   const investmentFunds = await InvestmentFund.query()
     .eager('[currency,manager,shares,balanceUpdates]');
   const investmentFundSettings = await knex('investmentFundSettings').select().first();
@@ -397,20 +397,14 @@ const fetchTrendData = async (req, res) => {
   const investmentFundTrendData = [];
   toPlot.forEach((update, index) => {
     investmentFundTrendData.push(update);
-    const DAY = 1000 * 60 * 60 * 24;
-    const dateToPlotTo = toPlot[index + 1] && toPlot[index + 1][0] || new Date();
-    const valueToPlotTo = toPlot[index + 1] && toPlot[index + 1][1] || update[1];
-    const daysToPlot = daysBetween(update[0], dateToPlotTo);
-    for (let i = 1; i < daysToPlot; i++) {
-      const x = valueToPlotTo + (valueToPlotTo * i / daysToPlot);
-      investmentFundTrendData.push([addDays(update[0], i), x]);
-    }
   });
+
+  const transformData = data => ([formatDate(data[0]), data[1].toFixed(2)]);
 
   return res.status(200).json({
     success: true,
-    investmentFundTrendData,
-  })
+    investmentFundTrendData: investmentFundTrendData.map(transformData),
+  });
 };
 
 const deleteFund = async (req, res) => {
