@@ -31,13 +31,13 @@ const generateDepositAddress = async (req, res) => {
   const { currencyCode } = req.params;
   const address = await UserAddress.query()
     .where({ userId: null, currencyCode })
-    .orderBy('createdAt', 'asc')
+    .orderBy('id', 'asc')
     .first();
 
   if (!address) {
     throw new NoAvailableAddresses();
   }
-  
+
   await address.$query().update({ userId: req.user.id });
   return res.status(201).json({ success: true, address });
 };
@@ -45,17 +45,17 @@ const generateDepositAddress = async (req, res) => {
 const addAddresses = async (req, res) => {
   const { code } = req.params;
   const { addresses } = req.body;
-  
+
   const currency = await Currency.query()
     .where('code', code)
     .first();
-    
+
   if (!currency) {
     return res.status(404).json({ success: false, message: 'Currency not found' });
   }
-  
+
   await currency.$relatedQuery('userAddresses').insert(addresses.map(a => ({ address: a })));
-  
+
   return res.status(200).json({ success: true });
 };
 
@@ -78,12 +78,12 @@ const fetchDeposits = async (req, res) => {
     .where('currencyCode', currencyCode)
     .orderBy('createdAt', 'desc')
     .limit(20);
-    
+
   return res.status(200).json({ success: true, deposits });
 };
 
 const createDeposit = async (req, res) => {
-  const { 
+  const {
     currencyCode,
     txId, userId,
     amount,
@@ -94,20 +94,16 @@ const createDeposit = async (req, res) => {
   if (existingDeposit) {
     throw new DepositAlreadyExists();
   }
-  
+
   await transaction(knex, async (trx) => {
     await Deposit.query(trx).insert({ currencyCode, txId, userId, amount, userAddressId });
     const balance = await Balance.query(trx).where({ userId, currencyCode }).first();
-    if (!balance) {
-      await Balance.query(trx).insert({ currencyCode, amount, userId });
-    } else {
-      await Balance.query(trx)
-        .forUpdate()
-        .update({ amount: knex.raw(`amount + ?`, amount) })
-        .where({ currencyCode, userId });
-    }
+    await Balance.query(trx)
+      .forUpdate()
+      .update({ amount: knex.raw(`amount + ?`, amount) })
+      .where({ currencyCode, userId });
   });
-  
+
   return res.status(200).json({ success: true, message: 'Deposit created.'});
 };
 
@@ -121,11 +117,11 @@ const findAddress = async (req, res) => {
     .skipUndefined()
     .andWhere('currencyCode', currencyCode)
     .first();
-  
+
   if (!address) {
     return res.status(404).json({ success: false, message: 'Address not found' });
   }
-  
+
   return res.status(200).json({ success: true, address });
 };
 
