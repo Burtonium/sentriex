@@ -47,7 +47,6 @@ routes.post('/investment-funds/:id/subscribe', auth.verifyToken, auth.verify2fa,
 routes.post('/investment-funds/:id/redeem', auth.verifyToken, auth.verify2fa, investmentFunds.redeemFromFund);
 routes.post('/investment-fund-requests/activate/:authenticationToken', auth.verifyToken, investmentFunds.activateRequest);
 
-
 routes.get('/referral-payments', auth.verifyToken, referrals.fetchPayments);
 
 // fund manager routes
@@ -57,9 +56,9 @@ routes.post('/manager/investment-funds/:id/balance-updates', auth.verifyManager,
 // admin routes
 routes.get('/admin/investment-fund-requests', auth.verifyAdmin, investmentFunds.fetchAllRequests);
 routes.patch('/admin/investment-fund-requests/:id', auth.verifyAdmin, investmentFunds.patchInvestmentFundRequest);
-
 routes.patch('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.updateInvestmentFund);
 routes.post('/admin/investment-funds', auth.verifyAdmin, investmentFunds.createInvestmentFund);
+routes.delete('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.deleteFund);
 
 routes.post('/admin/currencies', auth.verifyAdmin, currencies.create);
 routes.patch('/admin/currencies/:code', auth.verifyAdmin, currencies.patch);
@@ -69,7 +68,7 @@ routes.get('/admin/currencies/:code', auth.verifyAdmin, currencies.fetchCurrency
 routes.get('/admin/deposit-addresses/:depositAddress', auth.verifyAdmin, deposit.findAddress);
 routes.post('/admin/deposits', auth.verifyAdmin, deposit.createDeposit);
 routes.get('/admin/deposits', auth.verifyAdmin, deposit.fetchDeposits);
-routes.patch('/withdrawals/:id', auth.verifyAdmin, withdrawal.patch);
+routes.patch('/admin/withdrawals/:id', auth.verifyAdmin, withdrawal.patch);
 routes.get('/admin/withdrawals', auth.verifyAdmin, withdrawal.fetchWithdrawals);
 
 routes.get('/admin/settings', auth.verifyAdmin, settings.fetchSettings);

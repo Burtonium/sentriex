@@ -310,7 +310,7 @@ const createInvestmentFund = async (req, res) => {
   const investmentFund = await InvestmentFund.query().insert({
     creatorId: req.user.id,
     ...args,
-  });
+  }).returning('*');
 
   return res.status(200).json({ success: true, investmentFund });
 };
@@ -413,6 +413,12 @@ const fetchTrendData = async (req, res) => {
   })
 };
 
+const deleteFund = async (req, res) => {
+  const { id } = req.params;
+  await InvestmentFund.query().where({ id }).del();
+  return res.status(200).json({ success: true });
+}
+
 module.exports = {
   fetchAll,
   fetchTrendData,
@@ -429,4 +435,5 @@ module.exports = {
   cancelRequest,
   activateRequest: [authenticateResource, activateRequest],
   fetchPerformance,
+  deleteFund,
 };
