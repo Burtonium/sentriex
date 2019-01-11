@@ -1,4 +1,5 @@
-const ReferralPayments = require('../models/referral_payments')
+const ReferralPayments = require('../models/referral_payments');
+
 const fetchPayments = async (req, res) => {
   const referralPayments =  await ReferralPayments.query()
     .joinEager('payer')

@@ -1,5 +1,6 @@
 const { Model } = require('../database/index');
 const BigNumber = require('bignumber.js');
+const { daysFromNow } = require('../utils');
 
 class InvestmentFundRequest extends Model {
   static get tableName() {
@@ -7,7 +8,7 @@ class InvestmentFundRequest extends Model {
   }
 
   static get virtualAttributes() {
-    return ['isCancelable', 'isLocked', 'feeAmount', 'siteFees', 'profitShare'];
+    return ['isCancelable', 'isLocked', 'feeAmount', 'siteFees', 'profitShare', 'daysToWait'];
   }
 
   static get timestamp() {
@@ -46,6 +47,20 @@ class InvestmentFundRequest extends Model {
 
   get refundable() {
     return !this.refunded && this.type === InvestmentFundRequest.types.SUBSCRIPTION;
+  }
+
+  get daysToWait() {
+    if (!this.investmentFund || !this.investmentFund.redemptionWaitTime) {
+      return null;
+    }
+
+    const waitSeconds = this.investmentFund.redemptionWaitTime;
+    const { REDEMPTION } = InvestmentFundRequest.types;
+    const { PENDING } = InvestmentFundRequest.statuses;
+    const daysToWait = waitSeconds / (24 * 60 * 60);
+    return this.type === REDEMPTION &&
+           this.status === PENDING &&
+           Math.max(daysToWait - daysFromNow(this.createdAt), 0);
   }
 
   get feeAmount() {

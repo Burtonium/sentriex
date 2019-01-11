@@ -56,7 +56,7 @@ routes.post('/manager/investment-funds/:id/balance-updates', auth.verifyManager,
 // admin routes
 routes.get('/admin/investment-fund-requests', auth.verifyAdmin, investmentFunds.fetchAllRequests);
 routes.patch('/admin/investment-fund-requests/:id', auth.verifyAdmin, investmentFunds.patchInvestmentFundRequest);
-routes.patch('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.updateInvestmentFund);
+routes.patch('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.patchInvestmentFund);
 routes.post('/admin/investment-funds', auth.verifyAdmin, investmentFunds.createInvestmentFund);
 routes.delete('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.deleteFund);
 

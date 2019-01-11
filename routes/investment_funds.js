@@ -273,14 +273,16 @@ const updateBalance = async (req, res) => {
   return res.status(200).json({ success: true });
 };
 
-const updateInvestmentFund = async (req, res) => {
+const patchInvestmentFund = async (req, res) => {
   const { id } = req.params;
-  const args = pick(req.body, [
+  const fund = req.body.investmentFund || req.body;
+  const args = pick(fund, [
     'name',
     'currencyCode',
     'shortDescription',
     'detailedDescription',
     'riskLevel',
+    'redemptionWaitTime',
     'managedBy',
   ]);
 
@@ -292,18 +294,20 @@ const updateInvestmentFund = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Investment fund not found' });
   }
 
-  await investmentFund.$query().update(args);
+  const updatedFund = await investmentFund.$query().update(args).returning('*');
 
-  return res.status(200).json({ success: true });
+  return res.status(200).json({ success: true, investmentFund: updatedFund });
 };
 
 const createInvestmentFund = async (req, res) => {
-  const args = pick(req.body, [
+  const fund = req.body.investmentFund || req.body;
+  const args = pick(fund, [
     'name',
     'currencyCode',
     'shortDescription',
     'detailedDescription',
     'riskLevel',
+    'redemptionWaitTime',
     'managedBy',
   ]);
 
@@ -423,7 +427,7 @@ module.exports = {
   fetchRequests,
   fetchAllRequests,
   patchInvestmentFundRequest: [validate(patchInvestmentFundRequestSchema), patchInvestmentFundRequest],
-  updateInvestmentFund,
+  patchInvestmentFund,
   createInvestmentFund,
   fetchBalanceUpdates,
   cancelRequest,
