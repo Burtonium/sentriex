@@ -1,7 +1,7 @@
 const { transaction } = require('objection');
 const validate = require('celebrate').celebrate;
 const BigNumber = require('bignumber.js');
-const Mailer = require('./mailer');
+const { sendWithdrawalConfirmationEmail } = require('./emails');
 const Withdrawal = require('../models/withdrawal');
 const Balance = require('../models/balance');
 const User = require('../models/user');
@@ -32,26 +32,6 @@ class InvalidAuthenticationToken extends BadRequest {
     return 'Invalid authentication token';
   }
 }
-
-const sendWithdrawalAuthenticationEmail = async withdrawal => {
-  const { id, authenticationToken, amount, userId, currencyCode } = withdrawal;
-  const [user, currency] = await Promise.all([
-    withdrawal.user || User.query().where('id', userId).first(),
-    withdrawal.currency || Currency.query().where('code', currencyCode).first(),
-  ]);
-  const { email } = user;
-  const formattedAmount = currency.format(amount);
-  const url = `${process.env.SITE_URL}/withdrawals/${id}/activate/${authenticationToken}`;
-  const msg = {
-    to: email,
-    from: process.env.NOREPLY_EMAIL,
-    subject: 'User Activation',
-    text: `Please verify your withdrawal of ${formattedAmount} by clicking
-           the following link: ${url}`,
-  };
-
-  Mailer.send(msg);
-};
 
 const fetchMyWithdrawals = async (req, res) => {
   const { currencyCode } = req.query;
@@ -108,7 +88,11 @@ const create = async (req, res) => {
   });
 
   if (status === PENDING_EMAIL_VERIFICATION) {
-    sendWithdrawalAuthenticationEmail(withdrawal);
+    const [ user, currency ] = await Promise.all([
+      withdrawal.$relatedQuery('user'),
+      withdrawal.$relatedQuery('currency'),
+    ]);
+    sendWithdrawalConfirmationEmail({ withdrawal, user, currency });
   }
 
   return res.status(200).json({ success: true, withdrawal });
@@ -207,7 +191,6 @@ const patch = async (req, res) => {
       refundUser && balance.add(amountWithFees, trx),
     ]);
   });
-
 
   return res.status(200).json({ success: true });
 };

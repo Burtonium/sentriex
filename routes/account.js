@@ -1,12 +1,13 @@
 const assert = require('assert');
 const { pick } = require('lodash');
-const Mailer = require('./mailer');
+const { transaction } = require('objection');
+const validate = require('celebrate').celebrate;
 const { knex } = require('../database');
 const Currency = require('../models/currency');
+const { sendActivationEmail, sendPasswordResetEmail } = require('./emails');
 const PasswordReset = require('../models/password_reset');
 const Activation = require('../models/activation');
 const User = require('../models/user');
-const validate = require('celebrate').celebrate;
 const passwordResetSchema = require('./validation/password_reset.schema');
 const registrationSchema = require('./validation/registration.schema');
 
@@ -18,44 +19,6 @@ const {
   InvalidOldPassword,
   InvalidTwofaToken,
 } = require('./errors');
-
-const sendActivationEmail = async (user) => {
-  assert(user.id && user.email, 'Invalid user');
-
-  const activation = await Activation.query().insertAndFetch({
-    userId: user.id,
-  });
-
-  const msg = {
-    to: user.email,
-    from: process.env.NOREPLY_EMAIL,
-    subject: 'User Activation',
-    text: `Please activate your account by clicking the following link:
-           ${process.env.SITE_URL}/activate/${activation.token}`,
-  };
-
-  Mailer.send(msg);
-  return true;
-};
-
-const sendPasswordResetEmail = async (user) => {
-  assert(user.id && user.email, 'Invalid user');
-
-  const reset = await PasswordReset.query().insertAndFetch({
-    userId: user.id,
-  });
-
-  const msg = {
-    to: user.email,
-    from: process.env.NOREPLY_EMAIL,
-    subject: 'Password Reset',
-    text: `To reset your password please click on the following link:
-           ${process.env.SITE_URL}/reset-password/${reset.token}`,
-  };
-
-  Mailer.send(msg);
-  return true;
-};
 
 const register = async (req, res) => {
   const {
@@ -79,17 +42,22 @@ const register = async (req, res) => {
 
   const referred = referralCode
     ? (await User.query().where({ referralCode }).first()) : null;
-  
+
   const currencies = await Currency.query();
+
   const user = await User.query().insertGraph({
     email,
     password,
     username,
     referredBy: referred ? referred.id : null,
     balances: currencies.map(c => ({ currencyCode: c.code })),
+  }).returning('*');
+
+  const activation = await Activation.query().insertAndFetch({
+    userId: user.id,
   });
 
-  sendActivationEmail(user);
+  sendActivationEmail({ activation, user });
   return res.status(201).json(response);
 };
 
@@ -124,8 +92,12 @@ const resendToken = async (req, res) => {
     throw new UserNotFound();
   }
 
+  const activation = await Activation.query().insertAndFetch({
+    userId: user.id,
+  });
+
   if (!user.active) {
-    await sendActivationEmail(user);
+    await sendActivationEmail({ user, activation });
   }
 
   return res.status(200).json({ success: true, message: 'Activation email resent' });
@@ -144,7 +116,11 @@ const requestPasswordReset = async (req, res) => {
     return res.status(200).json({ success: true, message: 'Password reset request sent' });
   }
 
-  await sendPasswordResetEmail(user);
+  const reset = await PasswordReset.query().insertAndFetch({
+    userId: user.id,
+  });
+
+  sendPasswordResetEmail({ user, reset });
 
   return res.status(200).json({ success: true, message: 'Password reset request sent' });
 };
@@ -157,7 +133,7 @@ const resetPassword = async (req, res) => {
     used: false
   }).whereRaw('created_at >= (now() - interval \'1 hour\')')
   .first();
-  
+
   if (!reset) {
     throw new InvalidResetToken();
   }

@@ -20,7 +20,7 @@ routes.post('/reset', account.requestPasswordReset);
 routes.post('/reset-password/:resetToken?', account.resetPassword);
 routes.get('/account', auth.verifyToken, account.getAccount);
 
-routes.get('/2fa/secret', auth.generate2faSecret);
+routes.get('/2fa/secret', auth.verifyToken, auth.generate2faSecret);
 routes.post('/2fa/enable', auth.verifyToken, auth.enable2fa);
 routes.post('/2fa/disable', auth.verifyToken, auth.disable2fa);
 
