@@ -1,4 +1,5 @@
 const UserAddress = require('../models/user_address');
+const Currency = require('../models/currency');
 
 const generateDepositAddress = async (req, res) => {
   const { currencyCode } = req.params;
@@ -35,7 +36,7 @@ const addAddresses = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Currency not found' });
   }
 
-  await currency.$relatedQuery('userAddresses').insert(addresses.map(a => ({ address: a })));
+  await currency.$relatedQuery('userAddresses').insert(addresses.map(a => ({ address: a.trim() })));
 
   return res.status(200).json({ success: true });
 };
