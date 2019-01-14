@@ -9,6 +9,7 @@ const withdrawal = require('./withdraw');
 const settings = require('./settings');
 const user = require('./user');
 const referrals = require('./referrals');
+const userAddresses = require('./user_addresses');
 const routes = require('express').Router();
 
 routes.post('/authenticate', throttle({ rate: '5/s' }), auth.authenticate);
@@ -28,8 +29,9 @@ routes.get('/currencies', currencies.fetchAll);
 
 routes.get('/balances', auth.verifyToken, balances.fetchAll);
 
-routes.post('/generate-address/:currencyCode', auth.verifyToken, deposit.generateDepositAddress);
-routes.get('/deposit-addresses', auth.verifyToken, deposit.fetchDepositAddresses);
+routes.post('/generate-address/:currencyCode', auth.verifyToken, userAddresses.generateDepositAddress);
+routes.get('/deposit-addresses', auth.verifyToken, userAddresses.fetchDepositAddresses);
+
 routes.get('/deposits', auth.verifyToken, deposit.fetchMyDeposits);
 
 routes.get('/withdrawals', auth.verifyToken, withdrawal.fetchMyWithdrawals);
@@ -62,7 +64,7 @@ routes.delete('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.d
 
 routes.post('/admin/currencies', auth.verifyAdmin, currencies.create);
 routes.patch('/admin/currencies/:code', auth.verifyAdmin, currencies.patch);
-routes.post('/admin/currencies/:code/addresses', auth.verifyAdmin, deposit.addAddresses);
+routes.post('/admin/currencies/:code/addresses', auth.verifyAdmin, userAddresses.addAddresses);
 routes.get('/admin/currencies/:code', auth.verifyAdmin, currencies.fetchCurrencyInfo);
 
 routes.get('/admin/deposit-addresses/:depositAddress', auth.verifyAdmin, deposit.findAddress);
