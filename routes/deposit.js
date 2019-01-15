@@ -7,7 +7,7 @@ const UserAddress = require('../models/user_address');
 const Currency = require('../models/currency');
 const Balance = require('../models/balance');
 const Deposit = require('../models/deposit');
-const { NoAvailableAddresses, BadRequest } = require('./errors');
+const { BadRequest } = require('./errors');
 
 class DepositAlreadyExists extends BadRequest {
   get message() {

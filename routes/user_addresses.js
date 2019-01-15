@@ -1,5 +1,17 @@
+const { keyBy } = require('lodash');
 const UserAddress = require('../models/user_address');
 const Currency = require('../models/currency');
+const { NotImplemented } = require('./errors');
+
+class NoAvailableAddresses extends NotImplemented {
+  get message() {
+    return 'No address available';
+  }
+
+  get code() {
+    return 46;
+  }
+}
 
 const generateDepositAddress = async (req, res) => {
   const { currencyCode } = req.params;

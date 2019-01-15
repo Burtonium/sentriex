@@ -32,7 +32,7 @@ class NotImplemented extends Error {
   get status() {
     return 501;
   }
-  
+
   get message() {
     'Not Implemented';
   }
@@ -199,16 +199,6 @@ class CurrencyAlreadyExists extends BadRequest {
   }
 }
 
-class NoAvailableAddresses extends NotImplemented {
-  get message() {
-    return 'No address available';
-  }
-  
-  get code() {
-    return 46;
-  }
-}
-
 
 
 module.exports = {
@@ -232,5 +222,5 @@ module.exports = {
   CurrencyNotFound,
   InvalidCSRFToken,
   CurrencyAlreadyExists,
-  NoAvailableAddresses,
+  NotImplemented,
 };
