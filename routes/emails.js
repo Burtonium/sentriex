@@ -91,8 +91,24 @@ const sendWithdrawalConfirmationEmail = async ({ withdrawal, user, currency }) =
   return Mailer.send(msg);
 };
 
+const sendContactFormEmail = async ({ subject, message, name, email }) => {
+  const msg = {
+    to: process.env.CONTACT_EMAIL || 'contact@sentriex.com',
+    from: {
+      email: process.env.NOREPLY_EMAIL,
+      name: 'Sentriex',
+    },
+    replyTo: email,
+    subject,
+    text: message,
+  }
+
+  return Mailer.send(msg);
+};
+
 module.exports = {
   sendActivationEmail,
   sendPasswordResetEmail,
   sendWithdrawalConfirmationEmail,
+  sendContactFormEmail,
 }

@@ -10,6 +10,7 @@ const settings = require('./settings');
 const user = require('./user');
 const referrals = require('./referrals');
 const userAddresses = require('./user_addresses');
+const contact = require('./contact');
 const routes = require('express').Router();
 
 routes.post('/authenticate', throttle({ rate: '5/s' }), auth.authenticate);
@@ -50,6 +51,8 @@ routes.post('/investment-funds/:id/redeem', auth.verifyToken, auth.verify2fa, in
 routes.post('/investment-fund-requests/activate/:authenticationToken', auth.verifyToken, investmentFunds.activateRequest);
 
 routes.get('/referral-payments', auth.verifyToken, referrals.fetchPayments);
+
+routes.post('/contact', auth.validateRecaptcha, contact.receive);
 
 // fund manager routes
 routes.get('/manager/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.fetchBalanceUpdates);
