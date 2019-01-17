@@ -2,7 +2,6 @@ const configureKnex = require('knex');
 const objection = require('objection');
 const objectionTimestamp = require('objection-timestamp');
 const config = require('../knexfile.js');
-
 const knex = configureKnex(config);
 
 objectionTimestamp.register(objection, {

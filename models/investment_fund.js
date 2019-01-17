@@ -18,23 +18,28 @@ class InvestmentFund extends Model {
   }
 
   static get virtualAttributes() {
-    return ['sharePrice', 'shareCount', 'monthlyPerformance'];
+    return ['sharePrice', 'shareCount', 'monthlyPerformance', 'balance'];
   }
 
   get sharePrice() {
-    let price = null;
-    if (!this.shares) {
-      return price;
-    }
-    if (parseFloat(this.balance) === 0 || this.shareCount === null || this.shareCount.isEqualTo(0)) {
+    const bu = this.balanceUpdates;
+    if (!bu || bu.length === 0) {
       return 1;
     }
-    return new BigNumber(this.balance).dividedBy(this.shareCount).toString();
+    bu.sort((a, b) => new Date(a.sharePriceDate) - new Date(b.sharePriceDate));
+    return bu[bu.length - 1].updatedSharePrice;
   }
 
   get shareCount() {
     const s = this.shares;
+    if (!s || s.length === 0) {
+      return 0;
+    }
     return s ? s.reduce((acc, cur) => acc.plus(cur.amount), new BigNumber(0)) : null;
+  }
+
+  get balance() {
+    return new BigNumber(this.sharePrice).times(this.shareCount).toString();
   }
 
   get monthlyPerformance() {
@@ -43,28 +48,15 @@ class InvestmentFund extends Model {
       return null;
     }
 
-    const updates = b.filter(u => daysBetween(u.createdAt, new Date()) < 30);
+    const updates = b.filter(u => daysBetween(new Date(u.sharePriceDate), new Date()) <= 30);
 
     let performance = new BigNumber(0);
     if (updates.length) {
-      const firstPrice = parseFloat(updates[0].previousSharePrice);
+      const firstPrice = parseFloat(updates[0].updatedSharePrice);
       const lastPrice = parseFloat(updates[updates.length - 1].updatedSharePrice);
       performance = percentDifference(firstPrice, lastPrice);
     }
     return performance.times(100).toFixed(2);
-  }
-
-  async add(amount, trx) {
-    assert.ok(this.currency, 'Balance.add() requires currency precision');
-    this.balance = this.currency.toFixed(BigNumber(this.balance).plus(amount));
-    return this.$query(trx).forUpdate().update({ balance: this.balance });
-  }
-
-  async remove(amount, trx) {
-    assert.ok(this.currency, 'Balance.add() requires currency precision');
-    assert.ok(BigNumber(amount).isLessThanOrEqualTo(this.balance), `Trying to remove ${amount} from ${this.balance} of investmentFund:${this.id}`);
-    this.balance = this.currency.toFixed(BigNumber(this.balance).minus(amount));
-    return this.$query(trx).forUpdate().update({ balance: this.balance });
   }
 
   async approveSubscription(investmentFundRequest) {
@@ -93,7 +85,6 @@ class InvestmentFund extends Model {
           sharePrice: this.sharePrice,
         }),
         shareBalance.add(shareAmount.toString(), trx),
-        this.add(amount, trx),
       ]);
     });
   }
@@ -233,7 +224,6 @@ class InvestmentFund extends Model {
         managersBalance.add(managersCut, trx),
         userShareBalance.remove(shareAmount.toString(), trx),
         balance.add(amountMinusFees.toString(), trx),
-        this.remove(amount.toString(), trx),
       ]);
     });
   }

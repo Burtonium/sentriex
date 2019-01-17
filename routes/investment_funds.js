@@ -169,7 +169,7 @@ const patchInvestmentFundRequest = async (req, res) => {
     .query()
     .joinRelation('requests')
     .where('requests.id', id)
-    .eager('[requests.user.balances.currency,shares,currency]')
+    .eager('[requests.user.balances.currency,shares,currency,balanceUpdates]')
     .modifyEager('requests', qb => qb.where('id', id))
     .first();
 
@@ -239,13 +239,16 @@ const fetchAllRequests = async (req, res) => {
   return res.status(200).json({ success: true, requests });
 };
 
-const updateBalance = async (req, res) => {
+const updateSharePrice = async (req, res) => {
   const { id } = req.params;
-  const { amount } = req.body;
+  const { updatedSharePrice, sharePriceDate } = req.body;
+
+  const date = req.user.admin && sharePriceDate ? sharePriceDate : formatDate(new Date());
 
   const investmentFund = await InvestmentFund.query()
-    .where({ id })
-    .eager('shares')
+    .where('InvestmentFunds.id', id)
+    .eager('[shares,balanceUpdates]')
+    .modifyEager('balanceUpdates', qb => qb.where('sharePriceDate', date))
     .skipUndefined()
     .where({
       managedBy: req.user.admin ? undefined : req.user.id,
@@ -256,19 +259,22 @@ const updateBalance = async (req, res) => {
     return res.status(404).json({ success: false, message: 'Investment fund not found' });
   }
 
-  await transaction(knex, async (trx) => {
-    const previousSharePrice = investmentFund.sharePrice;
-    const previousBalance = investmentFund.balance;
-    investmentFund.balance = amount;
-    const updatedSharePrice = investmentFund.sharePrice;
-    await investmentFund.$relatedQuery('balanceUpdates', trx).insert({
-      previousSharePrice,
+  if (!investmentFund.shareCount) {
+    return res.status(400).json({ success: false, message: 'Initial investment required' });
+  }
+
+  if (investmentFund.balanceUpdates.length === 1) {
+    const update = investmentFund.balanceUpdates[0];
+    console.log({ updatedSharePrice });
+    await update.$query().update({
       updatedSharePrice,
-      previousBalance,
-      updatedBalance: amount,
     });
-    await investmentFund.$query(trx).update({ balance: amount });
-  });
+  } else {
+    await investmentFund.$relatedQuery('balanceUpdates').insert({
+      updatedSharePrice,
+      sharePriceDate: date,
+    });
+  }
 
   return res.status(200).json({ success: true });
 };
@@ -328,12 +334,9 @@ const fetchBalanceUpdates = async (req, res) => {
   const { id } = req.params;
   const investmentFund = await InvestmentFund.query()
     .eager('balanceUpdates')
+    .modifyEager(qb => qb.orderBy('sharePriceDate', 'asc'))
     .where({
       id,
-    })
-    .skipUndefined()
-    .where({
-      managedBy: req.user.admin ? undefined : req.user.id,
     }).first();
 
   if (!investmentFund) {
@@ -346,13 +349,17 @@ const fetchBalanceUpdates = async (req, res) => {
   });
 };
 
+const deleteBalanceUpdate = async (req, res) => {
+  const { id } = req.params;
+  await InvestmentFundBalanceUpdates.query().where({ id }).del();
+  return res.status(200).json({ success: true });
+}
+
 const fetchPerformance = async (req, res) => {
   const userId = req.user.id;
   const funds = await InvestmentFund.query()
-    .joinEager('shares')
-    .where({
-      userId,
-    })
+    .joinEager('[shares,balanceUpdates]')
+    .where('shares.userId', userId)
     .andWhere('shares.amount', '>', 0)
     .orderBy('updatedAt', 'asc');
 
@@ -387,27 +394,20 @@ const fetchTrendData = async (req, res) => {
   const investmentFundId = req.params.id;
   const balanceUpdates = await InvestmentFundBalanceUpdates.query()
     .where({ investmentFundId })
-    .orderBy('createdAt', 'asc');
+    .orderBy('sharePriceDate', 'asc');
 
   const { userRedeemProfitPercent } = await knex('investmentFundSettings').first();
-  const toPlot = balanceUpdates
+  const updates = balanceUpdates
     .map(bu => {
       return [
-        new Date(bu.createdAt),
-        ((parseFloat(bu.updatedSharePrice) - 1) * 100) * userRedeemProfitPercent,
+        bu.sharePriceDate,
+        (((parseFloat(bu.updatedSharePrice) - 1) * 100) * userRedeemProfitPercent).toFixed(2),
       ];
     });
 
-  const investmentFundTrendData = [];
-  toPlot.forEach((update, index) => {
-    investmentFundTrendData.push(update);
-  });
-
-  const transformData = data => ([formatDate(data[0]), data[1].toFixed(2)]);
-
   return res.status(200).json({
     success: true,
-    investmentFundTrendData: investmentFundTrendData.map(transformData),
+    investmentFundTrendData: updates,
   });
 };
 
@@ -423,13 +423,14 @@ module.exports = {
   subscribeToFund: [validate(subscriptionSchema), subscribeToFund],
   redeemFromFund,
   fetchShares,
-  updateBalance,
   fetchRequests,
   fetchAllRequests,
   patchInvestmentFundRequest: [validate(patchInvestmentFundRequestSchema), patchInvestmentFundRequest],
   patchInvestmentFund,
   createInvestmentFund,
   fetchBalanceUpdates,
+  updateSharePrice,
+  deleteBalanceUpdate,
   cancelRequest,
   activateRequest: [authenticateResource, activateRequest],
   fetchPerformance,

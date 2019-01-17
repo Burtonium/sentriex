@@ -56,7 +56,7 @@ routes.post('/contact', auth.validateRecaptcha, contact.receive);
 
 // fund manager routes
 routes.get('/manager/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.fetchBalanceUpdates);
-routes.post('/manager/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.updateBalance);
+routes.post('/manager/investment-funds/:id/balance-updates', auth.verifyManager, investmentFunds.updateSharePrice);
 
 // admin routes
 routes.get('/admin/investment-fund-requests', auth.verifyAdmin, investmentFunds.fetchAllRequests);
@@ -64,6 +64,7 @@ routes.patch('/admin/investment-fund-requests/:id', auth.verifyAdmin, investment
 routes.patch('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.patchInvestmentFund);
 routes.post('/admin/investment-funds', auth.verifyAdmin, investmentFunds.createInvestmentFund);
 routes.delete('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.deleteFund);
+routes.delete('/admin/balance-updates/:id', auth.verifyAdmin, investmentFunds.deleteBalanceUpdate);
 
 routes.post('/admin/currencies', auth.verifyAdmin, currencies.create);
 routes.patch('/admin/currencies/:code', auth.verifyAdmin, currencies.patch);

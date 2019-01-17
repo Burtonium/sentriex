@@ -1,4 +1,5 @@
 const { Model } = require('../database/index');
+const { formatDate } = require('../utils');
 
 class InvestmentFundBalanceUpdate extends Model {
   static get tableName() {
@@ -8,7 +9,16 @@ class InvestmentFundBalanceUpdate extends Model {
   static get timestamp() {
     return true;
   }
-  
+
+  $parseDatabaseJson(json) {
+    // Remember to call the super class's implementation.
+    json = super.$parseDatabaseJson(json);
+    if (json.sharePriceDate) {
+      json.sharePriceDate = formatDate(json.sharePriceDate);
+    }
+    return json;
+  }
+
   static get relationMappings() {
     return {
       investmentFund: {
