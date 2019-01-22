@@ -12,7 +12,7 @@ const host = process.env.DB_HOST || 'localhost';
 
 module.exports = {
   client: process.env.DB_CLIENT || 'pg',
-  connection: process.env.DB_URL || `postgres://${user}:${pass}@${host}:${port}/${db}`,
+  connection: process.env.DATABASE_URL || `postgres://${user}:${pass}@${host}:${port}/${db}`,
   ...knexSnakeCaseMappers(),
   seeds: {
     directory: `${__dirname}/seeds/${env}`,
