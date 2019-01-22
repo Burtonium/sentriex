@@ -8,6 +8,9 @@
     "dev": "nodemon index.js",
     "test": "PORT=1234 NODE_ENV=test mocha ./test/index.js --exit --slow 0"
   },
+  "engines": {
+    "node": ">= 10"
+  },
   "author": "Matt Burton",
   "license": "ISC",
   "dependencies": {
