@@ -2,7 +2,7 @@ const assert = require('assert');
 const { transaction } = require('objection');
 const BigNumber = require('bignumber.js');
 const validate = require('celebrate').celebrate;
-const { pick } = require('lodash');
+const { pick, omit } = require('lodash');
 const { daysBetween, addDays, formatDate } = require('../utils');
 const { knex } = require('../database');
 const InvestmentFund = require('../models/investment_fund');
@@ -239,46 +239,6 @@ const fetchAllRequests = async (req, res) => {
   return res.status(200).json({ success: true, requests });
 };
 
-const updateSharePrice = async (req, res) => {
-  const { id } = req.params;
-  const { updatedSharePrice, sharePriceDate } = req.body;
-
-  const date = req.user.admin && sharePriceDate ? sharePriceDate : formatDate(new Date());
-
-  const investmentFund = await InvestmentFund.query()
-    .where('InvestmentFunds.id', id)
-    .eager('[shares,balanceUpdates]')
-    .modifyEager('balanceUpdates', qb => qb.where('sharePriceDate', date))
-    .skipUndefined()
-    .where({
-      managedBy: req.user.admin ? undefined : req.user.id,
-    })
-    .first();
-
-  if (!investmentFund) {
-    return res.status(404).json({ success: false, message: 'Investment fund not found' });
-  }
-
-  if (!investmentFund.shareCount) {
-    return res.status(400).json({ success: false, message: 'Initial investment required' });
-  }
-
-  if (investmentFund.balanceUpdates.length === 1) {
-    const update = investmentFund.balanceUpdates[0];
-    console.log({ updatedSharePrice });
-    await update.$query().update({
-      updatedSharePrice,
-    });
-  } else {
-    await investmentFund.$relatedQuery('balanceUpdates').insert({
-      updatedSharePrice,
-      sharePriceDate: date,
-    });
-  }
-
-  return res.status(200).json({ success: true });
-};
-
 const patchInvestmentFund = async (req, res) => {
   const { id } = req.params;
   const fund = req.body.investmentFund || req.body;
@@ -330,31 +290,6 @@ const fetchShares = async (req, res) => {
   return res.status(200).json({ success: true, investmentFundShares });
 };
 
-const fetchBalanceUpdates = async (req, res) => {
-  const { id } = req.params;
-  const investmentFund = await InvestmentFund.query()
-    .eager('balanceUpdates')
-    .modifyEager(qb => qb.orderBy('sharePriceDate', 'asc'))
-    .where({
-      id,
-    }).first();
-
-  if (!investmentFund) {
-    return res.status(404).json({ success: false, message: 'Not found' });
-  }
-
-  res.status(200).json({
-    success: true,
-    balanceUpdates: investmentFund.balanceUpdates
-  });
-};
-
-const deleteBalanceUpdate = async (req, res) => {
-  const { id } = req.params;
-  await InvestmentFundBalanceUpdates.query().where({ id }).del();
-  return res.status(200).json({ success: true });
-}
-
 const fetchPerformance = async (req, res) => {
   const userId = req.user.id;
   const funds = await InvestmentFund.query()
@@ -390,27 +325,6 @@ const fetchPerformance = async (req, res) => {
   return res.status(200).json({ success: true, performance });
 }
 
-const fetchTrendData = async (req, res) => {
-  const investmentFundId = req.params.id;
-  const balanceUpdates = await InvestmentFundBalanceUpdates.query()
-    .where({ investmentFundId })
-    .orderBy('sharePriceDate', 'asc');
-
-  const { userRedeemProfitPercent } = await knex('investmentFundSettings').first();
-  const updates = balanceUpdates
-    .map(bu => {
-      return [
-        bu.sharePriceDate,
-        (((parseFloat(bu.updatedSharePrice) - 1) * 100) * userRedeemProfitPercent).toFixed(2),
-      ];
-    });
-
-  return res.status(200).json({
-    success: true,
-    investmentFundTrendData: updates,
-  });
-};
-
 const deleteFund = async (req, res) => {
   const { id } = req.params;
   await InvestmentFund.query().where({ id }).del();
@@ -419,7 +333,6 @@ const deleteFund = async (req, res) => {
 
 module.exports = {
   fetchAll,
-  fetchTrendData,
   subscribeToFund: [validate(subscriptionSchema), subscribeToFund],
   redeemFromFund,
   fetchShares,
@@ -428,9 +341,6 @@ module.exports = {
   patchInvestmentFundRequest: [validate(patchInvestmentFundRequestSchema), patchInvestmentFundRequest],
   patchInvestmentFund,
   createInvestmentFund,
-  fetchBalanceUpdates,
-  updateSharePrice,
-  deleteBalanceUpdate,
   cancelRequest,
   activateRequest: [authenticateResource, activateRequest],
   fetchPerformance,
