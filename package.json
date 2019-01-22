@@ -4,6 +4,7 @@
   "description": "Sentriex server side logic",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "PORT=1234 NODE_ENV=test mocha ./test/index.js --exit --slow 0"
   },
