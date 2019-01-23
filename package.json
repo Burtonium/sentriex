@@ -8,7 +8,8 @@
     "dev": "nodemon index.js",
     "test": "PORT=1234 NODE_ENV=test mocha ./test/index.js --exit --slow 0",
     "migrate": "knex migrate:latest",
-    "rollback": "knex migrate:rollback"
+    "rollback": "knex migrate:rollback",
+    "start-docker": "pm2-docker start pm2_configs/config.json"
   },
   "engines": {
     "node": ">= 10"
