@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "PORT=1234 NODE_ENV=test mocha ./test/index.js --exit --slow 0"
+    "test": "PORT=1234 NODE_ENV=test mocha ./test/index.js --exit --slow 0",
+    "migrate": "knex migrate:latest",
+    "rollback": "knex migrate:rollback"
   },
   "engines": {
     "node": ">= 10"
