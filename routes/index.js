@@ -51,6 +51,7 @@ routes.post('/investment-funds/:id/subscribe', auth.verifyToken, auth.verify2fa,
 routes.post('/investment-funds/:id/redeem', auth.verifyToken, auth.verify2fa, investmentFunds.redeemFromFund);
 routes.post('/investment-fund-requests/activate/:authenticationToken', auth.verifyToken, investmentFunds.activateRequest);
 
+routes.get('/investment-fund-settings', settings.fetchSettings);
 routes.get('/referral-payments', auth.verifyToken, referrals.fetchPayments);
 
 routes.post('/contact', auth.validateRecaptcha, contact.receive);
