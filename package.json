@@ -8,7 +8,8 @@
     "dev": "nodemon index.js",
     "test": "PORT=1234 NODE_ENV=test mocha ./test/index.js --exit --slow 0",
     "migrate": "knex migrate:latest",
-    "rollback": "knex migrate:rollback"
+    "rollback": "knex migrate:rollback",
+    "seed": "knex seed:run"
   },
   "engines": {
     "node": ">= 10"
@@ -18,6 +19,7 @@
   "dependencies": {
     "@sendgrid/mail": "^6.3.1",
     "bignumber.js": "^8.0.1",
+    "bitcoin-core": "^2.0.0",
     "celebrate": "^9.0.1",
     "cookie-parser": "^1.4.3",
     "cors": "^2.8.5",
