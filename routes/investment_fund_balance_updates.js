@@ -88,9 +88,16 @@ const deleteBalanceUpdate = async (req, res) => {
 
 const fetchTrendData = async (req, res) => {
   const investmentFundId = req.params.id;
-  const balanceUpdates = await InvestmentFundBalanceUpdates.query()
+  const investmentFund = await InvestmentFund.query()
+    .joinEager('balanceUpdates')
     .where({ investmentFundId })
-    .orderBy('sharePriceDate', 'asc');
+    .orderBy('sharePriceDate', 'asc')
+    .first();
+
+  if (!investmentFund) {
+    return res.status(404).json({ success: false });
+  }
+  const { balanceUpdates } = investmentFund;
 
   const { userRedeemProfitPercent } = await knex('investmentFundSettings').first();
   const updates = balanceUpdates
@@ -100,7 +107,8 @@ const fetchTrendData = async (req, res) => {
         (((parseFloat(bu.updatedSharePrice) - 1) * 100) * userRedeemProfitPercent).toFixed(2),
       ];
     });
-
+    
+  updates.unshift([formatDate(investmentFund.createdAt), 0]);
   return res.status(200).json({
     success: true,
     investmentFundTrendData: updates,

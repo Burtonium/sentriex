@@ -18,7 +18,7 @@ class InvestmentFund extends Model {
   }
 
   static get virtualAttributes() {
-    return ['sharePrice', 'shareCount', 'monthlyPerformance', 'balance'];
+    return ['sharePrice', 'shareCount', 'monthlyPerformance', 'performance', 'balance'];
   }
 
   get sharePrice() {
@@ -40,6 +40,23 @@ class InvestmentFund extends Model {
 
   get balance() {
     return new BigNumber(this.sharePrice).times(this.shareCount).toString();
+  }
+
+  get performance() {
+    const b = this.balanceUpdates;
+    if (!b) {
+      return null;
+    }
+
+    const updates = b;
+
+    let performance = new BigNumber(0);
+    if (updates.length) {
+      const firstPrice = parseFloat(updates[0].updatedSharePrice);
+      const lastPrice = parseFloat(updates[updates.length - 1].updatedSharePrice);
+      performance = percentDifference(firstPrice, lastPrice);
+    }
+    return performance.times(100).toFixed(2);
   }
 
   get monthlyPerformance() {
