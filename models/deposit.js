@@ -27,6 +27,14 @@ class Deposit extends Model {
           to: 'currencies.code',
         },
       },
+      address: {
+        relation: Model.BelongsToOneRelation,
+        modelClass: `${__dirname}/user_address`,
+        join: {
+          from: 'deposits.userAddressId',
+          to: 'user_addresses.id',
+        },
+      },
     };
   }
 }
