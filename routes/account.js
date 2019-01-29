@@ -4,7 +4,7 @@ const { transaction } = require('objection');
 const validate = require('celebrate').celebrate;
 const { knex } = require('../database');
 const Currency = require('../models/currency');
-const { sendActivationEmail, sendPasswordResetEmail } = require('./emails');
+const { sendActivationEmail, sendPasswordResetEmail, subscribeToMailer } = require('./emails');
 const PasswordReset = require('../models/password_reset');
 const Activation = require('../models/activation');
 const User = require('../models/user');
@@ -77,6 +77,8 @@ const activate = async (req, res) => {
   await User.query()
     .patch({ active: true, activatedAt: new Date() })
     .where('id', activation.user.id);
+
+  subscribeToMailer([activation.user.email]);
 
   res.status(200).json({ success: true, message: 'User activated' });
 };

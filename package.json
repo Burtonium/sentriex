@@ -17,6 +17,8 @@
   "author": "Matt Burton",
   "license": "ISC",
   "dependencies": {
+    "@sendgrid/client": "^6.3.0",
+    "@sendgrid/contact-importer": "^6.2.1",
     "@sendgrid/mail": "^6.3.1",
     "bignumber.js": "^8.0.1",
     "bitcoin-core": "^2.0.0",

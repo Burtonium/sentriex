@@ -12,6 +12,7 @@ const user = require('./user');
 const referrals = require('./referrals');
 const userAddresses = require('./user_addresses');
 const contact = require('./contact');
+const marketing = require('./marketing');
 const routes = require('express').Router();
 
 routes.post('/authenticate', throttle({ rate: '5/s' }), auth.authenticate);
@@ -86,5 +87,7 @@ routes.patch('/admin/settings', auth.verifyAdmin, settings.patchSettings);
 
 routes.get('/admin/users', auth.verifyAdmin, user.fetchAll);
 
+// Marketing routes
+routes.post('/subscribe', throttle({ rate: '3/s' }), marketing.subscribe);
 
 module.exports = routes;
