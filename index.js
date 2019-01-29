@@ -50,8 +50,8 @@ server.listen(port, () => {
 });
 
 // DAILY CRON JOBS
-new CronJob('00 00 00 * * *', () => { // eslint-disable-line
+new CronJob('00 00 20 * * *', () => { // eslint-disable-line
   const task = fork(`${__dirname}/scripts/daily_apr_fund_update.js`);
-}, null, true, 'Atlantic/Reykjavik');
+}, null, true, 'America/Toronto');
 
 module.exports = server;
