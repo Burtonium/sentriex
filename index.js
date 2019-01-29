@@ -50,8 +50,7 @@ server.listen(port, () => {
 });
 
 // DAILY CRON JOBS
-new CronJob('00 * * * * *', () => { // eslint-disable-line
-  console.log('Executing daily cron task');
+new CronJob('00 00 00 * * *', () => { // eslint-disable-line
   const task = fork(`${__dirname}/scripts/daily_apr_fund_update.js`);
 }, null, true, 'Atlantic/Reykjavik');
 
