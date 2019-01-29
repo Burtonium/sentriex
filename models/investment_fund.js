@@ -69,7 +69,7 @@ class InvestmentFund extends Model {
 
     let performance = new BigNumber(0);
     if (updates.length) {
-      const firstPrice = parseFloat(updates[0].updatedSharePrice);
+      const firstPrice = parseFloat(0);
       const lastPrice = parseFloat(updates[updates.length - 1].updatedSharePrice);
       performance = percentDifference(firstPrice, lastPrice);
     }
