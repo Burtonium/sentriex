@@ -249,6 +249,8 @@ const patchInvestmentFund = async (req, res) => {
     'detailedDescription',
     'riskLevel',
     'redemptionWaitTime',
+    'balanceUpdateStrategy',
+    'annualPercentageRate',
     'managedBy',
   ]);
 
@@ -274,6 +276,8 @@ const createInvestmentFund = async (req, res) => {
     'detailedDescription',
     'riskLevel',
     'redemptionWaitTime',
+    'balanceUpdateStrategy',
+    'annualPercentageRate',
     'managedBy',
   ]);
 

@@ -6,6 +6,8 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const helmet = require('helmet');
 const { isCelebrate } = require('celebrate');
+const { CronJob } = require('cron');
+const { fork } = require('child_process');
 const routes = require('./routes');
 const server = require('./server')(app);
 const env = process.env.NODE_ENV || 'development';
@@ -46,5 +48,11 @@ const connectionType = process.env.SELF_SIGN_SSL ? 'https' : 'http';
 server.listen(port, () => {
   console.log(`Listening on ${port} in ${env} mode with ${connectionType}`); // eslint-disable-line
 });
+
+// DAILY CRON JOBS
+new CronJob('00 * * * * *', () => { // eslint-disable-line
+  console.log('Executing daily cron task');
+  const task = fork(`${__dirname}/scripts/daily_apr_fund_update.js`);
+}, null, true, 'Atlantic/Reykjavik');
 
 module.exports = server;
