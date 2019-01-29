@@ -68,6 +68,7 @@ routes.post('/admin/investment-funds', auth.verifyAdmin, investmentFunds.createI
 routes.delete('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.deleteFund);
 routes.delete('/admin/balance-updates/:id', auth.verifyAdmin, balanceUpdates.deleteBalanceUpdate);
 routes.patch('/admin/balance-updates/:id', auth.verifyAdmin, balanceUpdates.patchBalanceUpdate);
+routes.post('/admin/investment-funds/:id/execute-apr-update', auth.verifyAdmin, balanceUpdates.runAprUpdate);
 
 routes.post('/admin/currencies', auth.verifyAdmin, currencies.create);
 routes.patch('/admin/currencies/:code', auth.verifyAdmin, currencies.patch);

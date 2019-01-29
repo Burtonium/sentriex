@@ -4,12 +4,15 @@ const InvestmentFundBalanceUpdates = require('../models/investment_fund_balance_
 const { formatDate, daysBetween, addDays } = require('../utils');
 const now = new Date();
 const today = new Date(formatDate(now));
+const investmentFundId = process.argv[2];
 
 (async () => {
   const fundsToUpdate = await InvestmentFund.query()
     .joinEager('[currency,manager,shares,balanceUpdates]')
     .modifyEager('balanceUpdates', qb => qb.orderBy('sharePriceDate', 'desc'))
-    .where({ balanceUpdateStrategy: 'apr' });
+    .where({ balanceUpdateStrategy: 'apr' })
+    .skipUndefined()
+    .where('investmentFunds.id', investmentFundId);
 
   const balanceUpdatesToInsert = [];
 
@@ -28,16 +31,21 @@ const today = new Date(formatDate(now));
     for (let i = 1; i <= daysSinceLastUpdate; i++) {
       const updatedSharePrice = trueDailyApr.times(i).plus(1)
         .times(lastUpdate.updatedSharePrice);
+      const aum = updatedSharePrice.times(fund.shareCount);
 
       balanceUpdatesToInsert.push({
         investmentFundId: fund.id,
         updatedSharePrice: updatedSharePrice.toString(),
         sharePriceDate: formatDate(addDays(lastUpdateDate, i)),
+        reportedAssetsUnderManagement: aum.isNaN() ? null : aum.toString(),
       });
     }
   });
 
   return InvestmentFundBalanceUpdates.query().insert(balanceUpdatesToInsert);
 })()
-.catch((e) => console.error(e))
-.finally(() => process.exit(0));
+.catch((e) => {
+  console.error(e);
+  process.exitCode = 1;
+})
+.finally(() => process.exit());
