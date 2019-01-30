@@ -1,17 +1,21 @@
-exports.seed = async (knex) => knex('balances').insert([{
+const { flatten } = require('lodash');
+
+const users = [{
   userId: 1,
-  currencyCode: 'BTC',
-  amount: 40,
 }, {
   userId: 2,
-  currencyCode: 'BTC',
-  amount: 40,
 }, {
   userId: 3,
-  currencyCode: 'BTC',
-  amount: 40,
 }, {
   userId: 4,
-  currencyCode: 'BTC',
-  amount: 40,
-}]);
+}];
+
+const currencies = ['BTC', 'LTC', 'ETH', 'XRP', 'CAD'];
+
+const balances = flatten(currencies.map(c => users.map(b => ({
+  ...b,
+  currencyCode: c,
+  amount: 40
+}))));
+
+exports.seed = async (knex) => knex('balances').insert(balances);

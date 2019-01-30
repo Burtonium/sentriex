@@ -1,7 +1,9 @@
 const Mailer = require('@sendgrid/mail');
+const Client = require('@sendgrid/client');
 const assert = require('assert');
 
 Mailer.setApiKey(process.env.SENDGRID_API_KEY);
+Client.setApiKey(process.env.SENDGRID_API_KEY);
 
 const templates = {
   emailWithButton: 'd-d628ed1bb4ea4011b690103211485757',
@@ -106,9 +108,16 @@ const sendContactFormEmail = async ({ subject, message, name, email }) => {
   return Mailer.send(msg);
 };
 
+const subscribeToMailer = (emails) => Client.request({
+    method: 'POST',
+    url: '/v3/contactdb/recipients',
+    body: emails.map(email => ({ email })),
+  });
+
 module.exports = {
   sendActivationEmail,
   sendPasswordResetEmail,
   sendWithdrawalConfirmationEmail,
   sendContactFormEmail,
+  subscribeToMailer,
 }

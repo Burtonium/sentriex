@@ -3,6 +3,8 @@ const InvestmentFund = require('../models/investment_fund');
 const InvestmentFundBalanceUpdates = require('../models/investment_fund_balance_update');
 const { formatDate } = require('../utils');
 const { knex } = require('../database');
+const { fork } = require('child_process');
+
 
 const createBalanceUpdate = async (req, res) => {
   const { id } = req.params;
@@ -88,9 +90,16 @@ const deleteBalanceUpdate = async (req, res) => {
 
 const fetchTrendData = async (req, res) => {
   const investmentFundId = req.params.id;
-  const balanceUpdates = await InvestmentFundBalanceUpdates.query()
+  const investmentFund = await InvestmentFund.query()
+    .joinEager('balanceUpdates')
     .where({ investmentFundId })
-    .orderBy('sharePriceDate', 'asc');
+    .orderBy('sharePriceDate', 'asc')
+    .first();
+
+  if (!investmentFund) {
+    return res.status(404).json({ success: false });
+  }
+  const { balanceUpdates } = investmentFund;
 
   const { userRedeemProfitPercent } = await knex('investmentFundSettings').first();
   const updates = balanceUpdates
@@ -101,10 +110,27 @@ const fetchTrendData = async (req, res) => {
       ];
     });
 
+  updates.unshift([formatDate(investmentFund.createdAt), 0]);
   return res.status(200).json({
     success: true,
     investmentFundTrendData: updates,
   });
+};
+
+const runAprUpdate = (req, res) => {
+  const { id } = req.params;
+  const task = fork(`${__dirname}/../scripts/daily_apr_fund_update.js`, [id]);
+
+  task.on('exit', () => {
+    res.status(200).json({ success: true });
+  });
+  task.on('error', () => {
+    res.status(500).json({ success: false })
+  })
+
+  setTimeout(() => {
+    task.kill();
+  }, 10000);
 };
 
 module.exports = {
@@ -113,4 +139,5 @@ module.exports = {
   patchBalanceUpdate,
   deleteBalanceUpdate,
   fetchTrendData,
+  runAprUpdate,
 }

@@ -12,6 +12,7 @@ const user = require('./user');
 const referrals = require('./referrals');
 const userAddresses = require('./user_addresses');
 const contact = require('./contact');
+const marketing = require('./marketing');
 const routes = require('express').Router();
 
 routes.post('/authenticate', throttle({ rate: '5/s' }), auth.authenticate);
@@ -51,6 +52,7 @@ routes.post('/investment-funds/:id/subscribe', auth.verifyToken, auth.verify2fa,
 routes.post('/investment-funds/:id/redeem', auth.verifyToken, auth.verify2fa, investmentFunds.redeemFromFund);
 routes.post('/investment-fund-requests/activate/:authenticationToken', auth.verifyToken, investmentFunds.activateRequest);
 
+routes.get('/investment-fund-settings', settings.fetchSettings);
 routes.get('/referral-payments', auth.verifyToken, referrals.fetchPayments);
 
 routes.post('/contact', auth.validateRecaptcha, contact.receive);
@@ -67,6 +69,7 @@ routes.post('/admin/investment-funds', auth.verifyAdmin, investmentFunds.createI
 routes.delete('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.deleteFund);
 routes.delete('/admin/balance-updates/:id', auth.verifyAdmin, balanceUpdates.deleteBalanceUpdate);
 routes.patch('/admin/balance-updates/:id', auth.verifyAdmin, balanceUpdates.patchBalanceUpdate);
+routes.post('/admin/investment-funds/:id/execute-apr-update', auth.verifyAdmin, balanceUpdates.runAprUpdate);
 
 routes.post('/admin/currencies', auth.verifyAdmin, currencies.create);
 routes.patch('/admin/currencies/:code', auth.verifyAdmin, currencies.patch);
@@ -84,5 +87,7 @@ routes.patch('/admin/settings', auth.verifyAdmin, settings.patchSettings);
 
 routes.get('/admin/users', auth.verifyAdmin, user.fetchAll);
 
+// Marketing routes
+routes.post('/subscribe', throttle({ rate: '3/s' }), marketing.subscribe);
 
 module.exports = routes;

@@ -1,7 +1,11 @@
 {
   "scripts": {
     "dokku": {
+<<<<<<< HEAD
       "postdeploy": "npm run migrate && npm run seed"
+=======
+      "postdeploy": "npm run migrate && NODE_ENV=development npm run seed"
+>>>>>>> dev
     }
   }
 }
