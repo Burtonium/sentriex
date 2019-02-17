@@ -1,8 +1,8 @@
 const User = require('../../models/user');
 
-exports.seed = async (knex) => User.query().insert([{
+const users = [{
   id: 1,
-  email: 'admin@sentriex.com',
+  email: 'admin@staging.sentriex.com',
   username: 'test_admin',
   type: 'admin',
   password: 'testadmin',
@@ -10,7 +10,7 @@ exports.seed = async (knex) => User.query().insert([{
   activatedAt: new Date()
 }, {
   id: 2,
-  email: 'manager@sentriex.com',
+  email: 'manager@staging.sentriex.com',
   username: 'test_fund_manager',
   type: 'fund_manager',
   password: 'testmanager',
@@ -19,7 +19,7 @@ exports.seed = async (knex) => User.query().insert([{
   activatedAt: new Date()
 }, {
   id: 3,
-  email: 'user@sentriex.com',
+  email: 'user@staging.sentriex.com',
   username: 'test_user',
   type: 'user',
   password: 'testuser',
@@ -28,11 +28,26 @@ exports.seed = async (knex) => User.query().insert([{
   activatedAt: new Date(),
 }, {
   id: 4,
-  email: 'referral@sentriex.com',
+  email: 'referral@staging.sentriex.com',
   username: 'test_referral',
   type: 'user',
   password: 'testreferral',
   active: true,
   activatedAt: new Date(),
   referredBy: 1,
-}]).then(() => knex.raw('select setval(\'users_id_seq\', max(id)) from users'));
+}];
+
+for (let i = 5; i <= 20; i++) {
+  users.push({
+    id: i,
+    email: `user_${i}@staging.sentriex.com`,
+    username: `user_${i}`,
+    type: 'user',
+    password: 'testuser',
+    active: true,
+    activatedAt: new Date(),
+    referredBy: 1,
+  })
+}
+
+exports.seed = async (knex) => User.query().insert(users).then(() => knex.raw('select setval(\'users_id_seq\', max(id)) from users'));

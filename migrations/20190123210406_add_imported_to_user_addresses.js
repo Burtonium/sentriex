@@ -1,8 +1,7 @@
+exports.up = knex => knex.schema.table('user_addresses', (table) => {
+  table.boolean('imported').defaultTo(false);
+});
 
-exports.up = function(knex, Promise) {
-  
-};
-
-exports.down = function(knex, Promise) {
-  
-};
+exports.down = knex => knex.schema.table('user_addresses', (table) => {
+  table.dropColumn('imported');
+});

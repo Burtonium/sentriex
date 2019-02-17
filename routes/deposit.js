@@ -44,8 +44,7 @@ const fetchDeposits = async (req, res) => {
 
 const createDeposit = async (req, res) => {
   const {
-    currencyCode,
-    txId, userId,
+    txId,
     amount,
     userAddressId,
   } = req.body.deposit || req.body;
@@ -55,14 +54,9 @@ const createDeposit = async (req, res) => {
     throw new DepositAlreadyExists();
   }
 
-  await transaction(knex, async (trx) => {
-    await Deposit.query(trx).insert({ currencyCode, txId, userId, amount, userAddressId });
-    const balance = await Balance.query(trx).where({ userId, currencyCode }).first();
-    await Balance.query(trx)
-      .forUpdate()
-      .update({ amount: knex.raw(`amount + ?`, amount) })
-      .where({ currencyCode, userId });
-  });
+  const addr = await UserAddress.query().where('id', userAddressId).first();
+
+  await addr.createDeposit({ txId, amount });
 
   return res.status(200).json({ success: true, message: 'Deposit created.'});
 };
