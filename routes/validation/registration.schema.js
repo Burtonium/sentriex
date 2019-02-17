@@ -6,6 +6,6 @@ module.exports = {
     username: Joi.string().token().required(),
     email: Joi.string().email().required(),
     password: Joi.string().regex(passwordRegex).required(),
-    referralCode: Joi.string().guid(),
+    referralCode: Joi.string().allow(''),
   }).unknown(),
 };

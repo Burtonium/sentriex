@@ -20,6 +20,7 @@ app.use(cors({
   origin: process.env.SITE_URL,
   credentials: true,
 }));
+
 app.use(cookieParser());
 app.use(helmet());
 app.use(helmet.hidePoweredBy());
@@ -28,7 +29,7 @@ app.use('/v1', routes);
 
 app.use((err, req, res, next) => {
   if (isCelebrate(err)) {
-    err = { status: 400, message: err.details[0].message, ...err,  };
+    err = { status: 400, message: err.details[0].message };
   }
   next(err);
 });
