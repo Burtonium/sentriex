@@ -70,6 +70,8 @@ routes.delete('/admin/investment-funds/:id', auth.verifyAdmin, investmentFunds.d
 routes.delete('/admin/balance-updates/:id', auth.verifyAdmin, balanceUpdates.deleteBalanceUpdate);
 routes.patch('/admin/balance-updates/:id', auth.verifyAdmin, balanceUpdates.patchBalanceUpdate);
 routes.post('/admin/investment-funds/:id/execute-apr-update', auth.verifyAdmin, balanceUpdates.runAprUpdate);
+routes.post('/admin/investment-funds/:investmentFundId/translate', auth.verifyAdmin, investmentFunds.translateFund);
+routes.get('/admin/investment-funds/:investmentFundId/translations', auth.verifyAdmin, investmentFunds.fetchTranslations);
 
 routes.post('/admin/currencies', auth.verifyAdmin, currencies.create);
 routes.patch('/admin/currencies/:code', auth.verifyAdmin, currencies.patch);

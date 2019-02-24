@@ -2,11 +2,9 @@ const assert = require('assert');
 const { transaction } = require('objection');
 const BigNumber = require('bignumber.js');
 const validate = require('celebrate').celebrate;
-const { pick, omit } = require('lodash');
-const { daysBetween, addDays, formatDate } = require('../utils');
+const { pick } = require('lodash');
 const { knex } = require('../database');
 const InvestmentFund = require('../models/investment_fund');
-const InvestmentFundBalanceUpdates = require('../models/investment_fund_balance_update');
 const InvestmentFundShares = require('../models/investment_fund_shares');
 const InvestmentFundRequest = require('../models/investment_fund_request');
 const Balance = require('../models/balance');
@@ -37,7 +35,7 @@ class CannotPatchRequest extends BadRequest {
 
 const fetchAll = async (req, res) => {
   const investmentFunds = await InvestmentFund.query()
-    .eager('[currency,manager,shares,balanceUpdates]');
+    .eager('[currency,manager,shares,balanceUpdates,translations]');
   const investmentFundSettings = await knex('investmentFundSettings').select().first();
   return res.status(200).json({ investmentFunds, investmentFundSettings });
 };
@@ -335,6 +333,43 @@ const deleteFund = async (req, res) => {
   return res.status(200).json({ success: true });
 }
 
+const translateFund = async (req, res) => {
+  const { investmentFundId } = req.params;
+  const { locale, name, shortDescription, detailedDescription } = req.body;
+
+  const translation = await knex('investment_fund_translations').where({ 
+    investmentFundId,
+    locale 
+  }).first();
+
+  if (!translation) {
+    await knex('investment_fund_translations').insert({
+      investmentFundId,
+      locale,
+      name, 
+      shortDescription,
+      detailedDescription,
+    })
+  } else {
+    await knex('investment_fund_translations').update({
+      name,
+      shortDescription,
+      detailedDescription,
+    }).where({ investmentFundId, locale });
+  }
+  return res.status(200).json({ success: true });
+}
+
+const fetchTranslations = async (req, res) => {
+  const { investmentFundId } = req.params;
+
+  const translations = await knex('investment_fund_translations').where({ 
+    investmentFundId,
+  });
+
+  return res.status(200).json({ success: true, translations });
+}
+
 module.exports = {
   fetchAll,
   subscribeToFund: [validate(subscriptionSchema), subscribeToFund],
@@ -349,4 +384,6 @@ module.exports = {
   activateRequest: [authenticateResource, activateRequest],
   fetchPerformance,
   deleteFund,
+  translateFund,
+  fetchTranslations,
 };

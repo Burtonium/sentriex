@@ -307,6 +307,14 @@ class InvestmentFund extends Model {
           from: 'investment_funds.id',
           to: 'investment_fund_profit_shares.investmentFundId',
         },
+      },
+      translations: {
+        relation: Model.HasManyRelation,
+        modelClass: `${__dirname}/investment_fund_translation`,
+        join: {
+          from: 'investment_funds.id',
+          to: 'investment_fund_translations.investmentFundId',
+        }
       }
     };
   }

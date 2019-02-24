@@ -27,14 +27,14 @@ app.use(helmet.hidePoweredBy());
 app.get('/', (req, res) => res.send('Welcome to Sentriex API V1'));
 app.use('/v1', routes);
 
-app.use((err, req, res, next) => {
+app.use((err, _req, _res, next) => {
   if (isCelebrate(err)) {
     err = { status: 400, message: err.details[0].message };
   }
   next(err);
 });
 
-app.use((err, req, res, next) => {
+app.use((err, _req, res, next) => {
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Something went wrong',
